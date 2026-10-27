@@ -14,6 +14,7 @@ final class Account {
     private static final int EXPIRATION_DATE = 58;
     private static final int CYCLE_CREDIT = 78;
     private static final int CYCLE_DEBIT = 90;
+    private static final int GROUP_ID = 112;
     private static final int AMOUNT_LENGTH = 12;
 
     private final StringBuilder record;
@@ -59,6 +60,18 @@ final class Account {
     void post(BigDecimal amount) {
         addTo(CURR_BAL, amount);
         addTo(amount.signum() >= 0 ? CYCLE_CREDIT : CYCLE_DEBIT, amount);
+    }
+
+    String groupId() {
+        return record.substring(GROUP_ID, GROUP_ID + 10);
+    }
+
+    /** CBACT04C 1050-UPDATE-ACCOUNT: add the cycle's interest and reset the cycle totals. */
+    void closeCycle(BigDecimal interest) {
+        addTo(CURR_BAL, interest);
+        String zero = ZonedDecimal.encode(BigDecimal.ZERO, 10, 2);
+        record.replace(CYCLE_CREDIT, CYCLE_CREDIT + AMOUNT_LENGTH, zero);
+        record.replace(CYCLE_DEBIT, CYCLE_DEBIT + AMOUNT_LENGTH, zero);
     }
 
     String toRecord() {

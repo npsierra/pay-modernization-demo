@@ -21,6 +21,7 @@ final class PostingFiles {
     static final String CARD_XREF = "cardxref.txt";
     static final String ACCOUNTS = "acctdata.txt";
     static final String CATEGORY_BALANCES = "tcatbal.txt";
+    static final String DISCLOSURE_GROUPS = "discgrp.txt";
 
     static final String TRANSACTIONS_OUT = "TRANSACT.txt";
     static final String ACCOUNTS_OUT = "ACCTDATA.txt";
@@ -50,6 +51,11 @@ final class PostingFiles {
     static KeyedFile<CategoryBalance> readCategoryBalances(Path inputDir) {
         return load(inputDir.resolve(CATEGORY_BALANCES), "TRANSACTION BALANCE FILE", CategoryBalance.LENGTH,
                 CategoryBalance::parse, CategoryBalance::key);
+    }
+
+    static KeyedFile<DisclosureGroup> readDisclosureGroups(Path inputDir) {
+        return load(inputDir.resolve(DISCLOSURE_GROUPS), "DISCLOSURE GROUP FILE", DisclosureGroup.LENGTH,
+                DisclosureGroup::parse, DisclosureGroup::key);
     }
 
     static void writeOutputs(DailyTransactionPosting posting, Path outputDir) {

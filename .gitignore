@@ -11,3 +11,6 @@ java/target/
 build/cbtrn02c-compare/
 build/cbtrn02c-fuzz/
 __pycache__/
+gnucobol/work-cbact04c/
+gnucobol/work-chain/
+build/cbact04c-compare/
