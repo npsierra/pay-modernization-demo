@@ -19,7 +19,7 @@ The script compiles everything and rebuilds the input files from `app/data/ASCII
 | `data/TCATBALF.after.txt` | Category balances after posting |
 | `data/TRANSACT.after.txt` | Transaction master (posted transactions) |
 
-Exit codes match the mainframe step: 0 means everything posted, 4 means it finished with some rejects, and anything higher means it failed.
+The script exits with the program's return code, as the mainframe step would: 0 means everything posted, 4 means it finished with some rejects, and anything higher means it failed.
 
 ## How the JCL maps to this setup
 

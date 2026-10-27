@@ -66,3 +66,4 @@ cut -c351-430 "$WORK/rejects.txt" | sed 's/ *$//' | sort | uniq -c
 echo "Accounts updated: $(diff "$DD/ACCTDATA.before.txt" "$DD/ACCTDATA.after.txt" | grep -c '^>' || true)"
 echo "Category balance records: $(wc -l < "$DD/TCATBAL.txt") before, $(wc -l < "$DD/TCATBALF.after.txt") after"
 echo "Outputs in $WORK (sysout.txt, rejects.txt, data/*.after.txt)"
+exit "$RC"
