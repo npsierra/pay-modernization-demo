@@ -7,3 +7,5 @@ batch-app/markers/*
 .DS_Store
 **/.DS_Store
 gnucobol/work/
+java/target/
+build/cbtrn02c-compare/
