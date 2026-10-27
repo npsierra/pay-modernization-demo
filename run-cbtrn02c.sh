@@ -10,7 +10,7 @@ WORK="${WORK_DIR:-$ROOT/gnucobol/work}"
 BIN="$WORK/bin"
 DD="$WORK/data"
 
-command -v cobc >/dev/null || { echo "cobc not found: sudo apt-get install -y gnucobol" >&2; exit 1; }
+command -v cobc >/dev/null || { echo "cobc not found: install GnuCOBOL (Ubuntu: sudo apt-get install -y gnucobol, macOS: brew install gnucobol)" >&2; exit 1; }
 
 rm -rf "$BIN" "$DD"
 rm -f "$WORK/sysout.txt" "$WORK/rejects.txt"
@@ -20,7 +20,8 @@ echo "== Compile"
 # -fsign=EBCDIC: the sample data stores signed amounts with mainframe overpunch
 # signs ('{' = +0, 'A'..'I' = +1..+9, '}' = -0, 'J'..'R' = -1..-9).
 cobc -x -fsign=EBCDIC -I "$ROOT/app/cpy" -o "$BIN/CBTRN02C" "$ROOT/app/cbl/CBTRN02C.cbl"
-cobc -m -o "$BIN/CEE3ABD.so" "$ROOT/gnucobol/CEE3ABD.cbl"
+# Built in $BIN so cobc picks the platform module extension (.so on Linux, .dylib on macOS).
+(cd "$BIN" && cobc -m "$ROOT/gnucobol/CEE3ABD.cbl")
 cobc -x -o "$BIN/KSDSUTIL" "$ROOT/gnucobol/KSDSUTIL.cbl"
 # STEPLIB equivalent: where dynamic CALLs (CEE3ABD) are resolved.
 export COB_LIBRARY_PATH="$BIN"
@@ -60,10 +61,10 @@ unload ACCTDATA.after.txt ACCTDATA.idx ACCT
 unload TCATBALF.after.txt TCATBALF.idx TCATBAL
 unload TRANSACT.after.txt TRANSACT.idx TRAN
 fold -w 430 "$DD/DALYREJS.dat" > "$WORK/rejects.txt" 2>/dev/null || : > "$WORK/rejects.txt"
-echo "Transactions posted to TRANSACT: $(wc -l < "$DD/TRANSACT.after.txt")"
+echo "Transactions posted to TRANSACT: $(wc -l < "$DD/TRANSACT.after.txt" | tr -d " ")"
 echo "Rejects by reason (code + description):"
 cut -c351-430 "$WORK/rejects.txt" | sed 's/ *$//' | sort | uniq -c
 echo "Accounts updated: $(diff "$DD/ACCTDATA.before.txt" "$DD/ACCTDATA.after.txt" | grep -c '^>' || true)"
-echo "Category balance records: $(wc -l < "$DD/TCATBAL.txt") before, $(wc -l < "$DD/TCATBALF.after.txt") after"
+echo "Category balance records: $(wc -l < "$DD/TCATBAL.txt" | tr -d " ") before, $(wc -l < "$DD/TCATBALF.after.txt" | tr -d " ") after"
 echo "Outputs in $WORK (sysout.txt, rejects.txt, data/*.after.txt)"
 exit "$RC"
