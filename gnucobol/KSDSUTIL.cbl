@@ -139,7 +139,7 @@
                  AT END MOVE 'Y' TO WS-EOF
                  NOT AT END
                    WRITE TEXT-REC FROM XREF-REC
-                   ADD 1 TO WS-COUNT
+                   PERFORM 8300-CHECK-TEXT-IO
                END-READ
            END-PERFORM
            CLOSE XREF-FILE TEXT-FILE.
@@ -152,7 +152,7 @@
                  AT END MOVE 'Y' TO WS-EOF
                  NOT AT END
                    WRITE TEXT-REC FROM ACCT-REC
-                   ADD 1 TO WS-COUNT
+                   PERFORM 8300-CHECK-TEXT-IO
                END-READ
            END-PERFORM
            CLOSE ACCT-FILE TEXT-FILE.
@@ -165,7 +165,7 @@
                  AT END MOVE 'Y' TO WS-EOF
                  NOT AT END
                    WRITE TEXT-REC FROM TCATBAL-REC
-                   ADD 1 TO WS-COUNT
+                   PERFORM 8300-CHECK-TEXT-IO
                END-READ
            END-PERFORM
            CLOSE TCATBAL-FILE TEXT-FILE.
@@ -178,7 +178,7 @@
                  AT END MOVE 'Y' TO WS-EOF
                  NOT AT END
                    WRITE TEXT-REC FROM TRAN-REC
-                   ADD 1 TO WS-COUNT
+                   PERFORM 8300-CHECK-TEXT-IO
                END-READ
            END-PERFORM
            CLOSE TRAN-FILE TEXT-FILE.
@@ -200,6 +200,15 @@
            IF WS-KSDS-STATUS NOT = '00'
                DISPLAY 'KSDSUTIL WRITE FAILED: STATUS=' WS-KSDS-STATUS
                        ' KEY=' TEXT-REC(1:17) UPON SYSERR
+               MOVE 12 TO RETURN-CODE
+               STOP RUN
+           END-IF
+           ADD 1 TO WS-COUNT.
+
+       8300-CHECK-TEXT-IO.
+           IF WS-TEXT-STATUS NOT = '00'
+               DISPLAY 'KSDSUTIL TEXT WRITE FAILED: STATUS='
+                       WS-TEXT-STATUS UPON SYSERR
                MOVE 12 TO RETURN-CODE
                STOP RUN
            END-IF
