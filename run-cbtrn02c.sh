@@ -12,7 +12,8 @@ DD="$WORK/data"
 
 command -v cobc >/dev/null || { echo "cobc not found: sudo apt-get install -y gnucobol" >&2; exit 1; }
 
-rm -rf "$WORK"
+rm -rf "$BIN" "$DD"
+rm -f "$WORK/sysout.txt" "$WORK/rejects.txt"
 mkdir -p "$BIN" "$DD"
 
 echo "== Compile"
