@@ -9,3 +9,5 @@ batch-app/markers/*
 gnucobol/work/
 java/target/
 build/cbtrn02c-compare/
+build/cbtrn02c-fuzz/
+__pycache__/
