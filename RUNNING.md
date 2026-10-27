@@ -5,11 +5,12 @@ This runs the batch program `app/cbl/CBTRN02C.cbl` on Linux with GnuCOBOL. It us
 ## Quick start
 
 ```bash
-sudo apt-get install -y gnucobol   # GnuCOBOL 3.1.2 on Ubuntu 22.04
+sudo apt-get install -y gnucobol   # Ubuntu 22.04: GnuCOBOL 3.1.2
+brew install gnucobol              # macOS: GnuCOBOL 3.2
 ./run-cbtrn02c.sh
 ```
 
-The script compiles everything and rebuilds the input files from `app/data/ASCII`, so each run starts from the same data. It then runs the program and prints a summary. Everything it creates goes in `gnucobol/work/`, which git ignores:
+Tested with GnuCOBOL 3.1.2 and 3.2 (the version Homebrew installs); both give identical results. The script compiles everything and rebuilds the input files from `app/data/ASCII`, so each run starts from the same data. It then runs the program and prints a summary. Everything it creates goes in `gnucobol/work/`, which git ignores:
 
 | File | Contents |
 |---|---|
