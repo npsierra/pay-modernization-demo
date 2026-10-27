@@ -4,6 +4,7 @@ in the same ASCII layout as app/data/ASCII.
 
   cbtrn02c_data.py edge OUT_DIR           hand-made cases for every reject reason and boundary
   cbtrn02c_data.py random SEED OUT_DIR    a random batch (same seed = same files)
+  cbtrn02c_data.py intcalc SEED OUT_DIR   random CBACT04C input (tcatbal, acctdata, cardxref, discgrp)
 """
 import random
 import sys
@@ -44,10 +45,10 @@ def xref(card, customer_id, acct_id):
     return card + f"{customer_id:09d}" + f"{acct_id:011d}"
 
 
-def account(acct_id, limit, expiration, balance=0, cycle_credit=0, cycle_debit=0):
+def account(acct_id, limit, expiration, balance=0, cycle_credit=0, cycle_debit=0, group=""):
     record = (f"{acct_id:011d}" + "Y" + zoned(balance, 10) + zoned(limit, 10) + zoned(Decimal(limit) / 2, 10)
               + "2015-01-01" + expiration + expiration + zoned(cycle_credit, 10) + zoned(cycle_debit, 10)
-              + "A000000000")
+              + "A000000000" + fixed(group, 10))
     return fixed(record, 300)
 
 
@@ -181,6 +182,50 @@ def random_batch(seed):
     return trans, xrefs, accounts, list(tcatbals.values())
 
 
+def intcalc_batch(seed):
+    """Random CBACT04C input. Every category balance's account has an account record and a
+    card (a missing one makes the COBOL abend). Groups mix known, unknown (falls back to
+    DEFAULT) and blank; rates include zero, so some balances get no interest."""
+    rng = random.Random(seed)
+
+    def money(low, high):
+        return Decimal(rng.randint(int(low * 100), int(high * 100))) / 100
+
+    groups = ["GOLD", "SILVER", "ZEROAPR", "NOSUCHGRP", ""]
+    discgrp = []
+    for group in ["DEFAULT", "GOLD", "SILVER", "ZEROAPR"]:
+        for type_cd in ["01", "02", "03"]:
+            for cat_cd in range(1, 6):
+                if group != "DEFAULT" and rng.random() < 0.3:
+                    continue
+                rate = Decimal(0) if group == "ZEROAPR" or rng.random() < 0.15 else money(-5, 99.99)
+                discgrp.append(fixed(fixed(group, 10) + type_cd + f"{cat_cd:04d}" + zoned(rate, 4), 50))
+    acct_ids = sorted(rng.sample(range(1, 100_000), rng.randint(1, 20)))
+    accounts, xrefs, tcatbals = [], [], []
+    for acct_id in acct_ids:
+        big = rng.random() < 0.05
+        accounts.append(account(acct_id, money(0, 50_000), "2030-12-31",
+                                balance=money(-9_999_999_999, 9_999_999_999) if big else money(-5_000, 5_000),
+                                cycle_credit=money(0, 5_000), cycle_debit=-money(0, 1_000),
+                                group=rng.choice(groups)))
+        for _ in range(rng.randint(1, 3)):
+            xrefs.append(xref(card_number(rng.randint(0, 10**15)), acct_id, acct_id))
+        for type_cd in ["01", "02", "03"]:
+            for cat_cd in range(1, 6):
+                if rng.random() < 0.3:
+                    balance = money(-999_999_999.99, 999_999_999.99) if big else money(-20_000, 20_000)
+                    tcatbals.append(tcatbal(acct_id, type_cd, cat_cd, balance))
+    return tcatbals, xrefs, accounts, discgrp
+
+
+def write_intcalc(out_dir, tcatbals, xrefs, accounts, discgrp):
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    for name, lines in (("tcatbal.txt", tcatbals), ("cardxref.txt", xrefs), ("acctdata.txt", accounts),
+                        ("discgrp.txt", discgrp)):
+        (out / name).write_text("".join(line + "\n" for line in sorted(lines)), encoding="ascii")
+
+
 def write(out_dir, trans, xrefs, accounts, tcatbals):
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
@@ -195,6 +240,8 @@ def main(argv):
         write(argv[2], *edge())
     elif len(argv) == 4 and argv[1] == "random":
         write(argv[3], *random_batch(int(argv[2])))
+    elif len(argv) == 4 and argv[1] == "intcalc":
+        write_intcalc(argv[3], *intcalc_batch(int(argv[2])))
     else:
         sys.exit(__doc__)
 

@@ -37,6 +37,12 @@ jobs:
       - name: Random batches, COBOL vs Java
         run: tests/fuzz-cbtrn02c.py 1 200
 
+      - name: CBACT04C (interest) after CBTRN02C, COBOL and Java vs baseline
+        run: tests/compare-cbact04c.sh
+
+      - name: CBACT04C random batches, COBOL vs Java
+        run: tests/fuzz-cbtrn02c.py 1 200 cbact04c
+
       - name: Keep outputs for inspection
         if: always()
         uses: actions/upload-artifact@v4
@@ -44,5 +50,6 @@ jobs:
           name: cbtrn02c-outputs
           path: |
             build/cbtrn02c-compare/
+            build/cbact04c-compare/
             build/cbtrn02c-fuzz/
           if-no-files-found: ignore

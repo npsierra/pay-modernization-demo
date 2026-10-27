@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """Differential test: builds random CBTRN02C batches (tests/cbtrn02c_data.py), runs the
 original COBOL (run-cbtrn02c.sh) and the Java port on each, and fails on the first output
-that differs. Usage: fuzz-cbtrn02c.py [FIRST_SEED] [COUNT]. Needs java/target/cbtrn02c.jar.
+that differs. Usage: fuzz-cbtrn02c.py [FIRST_SEED] [COUNT] [cbtrn02c|cbact04c].
+cbact04c runs the interest calculation (run-cbact04c.sh vs IntcalcMain) on random
+category balances instead. Needs java/target/cbtrn02c.jar.
 """
 import os
 import shutil
@@ -36,6 +38,54 @@ def normalize(path, mask_timestamp):
     return lines
 
 
+INTCALC_PAIRS = [
+    ("sysout", "sysout.txt", "sysout.txt"),
+    ("ACCTDATA", "data/ACCTDATA.after.txt", "ACCTDATA.txt"),
+    ("SYSTRAN", "SYSTRAN.txt", "SYSTRAN.txt"),
+]
+
+
+def normalize_systran(path):
+    """SYSTRAN: drop trailing spaces, blank the two run-time timestamps (cols 279-330)."""
+    lines = []
+    for line in path.read_text(encoding="ascii").splitlines():
+        if len(line) > 278:
+            line = line.ljust(350)
+            line = line[:278] + " " * 52 + line[330:]
+        lines.append(line.rstrip(" "))
+    return lines
+
+
+def run_intcalc_seed(seed):
+    case = OUT / f"cbact04c-seed-{seed}"
+    shutil.rmtree(case, ignore_errors=True)
+    data, cobol, java = case / "input", case / "cobol", case / "java"
+    cbtrn02c_data.write_intcalc(data, *cbtrn02c_data.intcalc_batch(seed))
+    cobol_rc = subprocess.run([str(ROOT / "run-cbact04c.sh")], env={**os.environ, "INPUT_DIR": str(data),
+                              "WORK_DIR": str(cobol)}, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL).returncode
+    java.mkdir(parents=True)
+    with open(java / "sysout.txt", "w") as sysout:
+        java_rc = subprocess.run(["java", "-cp", str(JAR), "com.carddemo.posttran.IntcalcMain", "--input-dir",
+                                  str(data), "--output-dir", str(java)], stdout=sysout,
+                                 stderr=subprocess.DEVNULL).returncode
+    problems = []
+    if cobol_rc != java_rc:
+        problems.append(f"return code COBOL {cobol_rc} vs Java {java_rc}")
+    if cobol_rc != 0:
+        problems.append(f"COBOL failed with return code {cobol_rc}")
+    if not problems:
+        for name, cobol_file, java_file in INTCALC_PAIRS:
+            read = normalize_systran if name == "SYSTRAN" else (lambda f: normalize(f, False))
+            if read(cobol / cobol_file) != read(java / java_file):
+                problems.append(f"{name} differs ({cobol / cobol_file} vs {java / java_file})")
+    if problems:
+        return problems, 0
+    written = len(normalize_systran(cobol / "SYSTRAN.txt"))
+    shutil.rmtree(case)
+    return problems, written
+
+
 def run_seed(seed):
     case = OUT / f"seed-{seed}"
     shutil.rmtree(case, ignore_errors=True)
@@ -68,20 +118,25 @@ def run_seed(seed):
 def main():
     first = int(sys.argv[1]) if len(sys.argv) > 1 else 1
     count = int(sys.argv[2]) if len(sys.argv) > 2 else 100
+    job = sys.argv[3] if len(sys.argv) > 3 else "cbtrn02c"
+    if job not in ("cbtrn02c", "cbact04c"):
+        sys.exit(__doc__)
+    run = run_intcalc_seed if job == "cbact04c" else run_seed
+    noun = "interest transactions" if job == "cbact04c" else "rejects"
     if not JAR.exists():
         sys.exit(f"{JAR} not found: run 'mvn package' in java/ first")
     rejects = 0
     for seed in range(first, first + count):
-        problems, seed_rejects = run_seed(seed)
+        problems, seed_rejects = run(seed)
         if problems:
             print(f"seed {seed}: MISMATCH")
             for problem in problems:
                 print(f"  {problem}")
-            print(f"Reproduce: tests/fuzz-cbtrn02c.py {seed} 1 (inputs kept in {OUT}/seed-{seed})")
+            print(f"Reproduce: tests/fuzz-cbtrn02c.py {seed} 1 {job} (inputs kept under {OUT})")
             sys.exit(1)
         rejects += seed_rejects
-    print(f"{count} random batches (seeds {first}-{first + count - 1}): COBOL and Java identical "
-          f"({rejects} rejects in total)")
+    print(f"{job}: {count} random batches (seeds {first}-{first + count - 1}): COBOL and Java identical "
+          f"({rejects} {noun} in total)")
 
 
 if __name__ == "__main__":
