@@ -10,7 +10,7 @@ brew install gnucobol              # macOS: GnuCOBOL 3.2
 ./run-cbtrn02c.sh
 ```
 
-Tested with GnuCOBOL 3.1.2 and 3.2 (the version Homebrew installs); both give identical results. The script compiles everything and rebuilds the input files from `app/data/ASCII`, so each run starts from the same data. It then runs the program and prints a summary. Everything it creates goes in `gnucobol/work/`, which git ignores:
+Tested with GnuCOBOL 3.1.2 and 3.2 (the version Homebrew installs); both give identical results. The script compiles everything and rebuilds the input files from `app/data/ASCII`, so each run starts from the same data. It then runs the program and prints a summary. Set `INPUT_DIR` to run it on other input files with the same names. Everything it creates goes in `gnucobol/work/` (or `WORK_DIR`), which git ignores:
 
 | File | Contents |
 |---|---|
@@ -91,7 +91,15 @@ It reads the ASCII sample files directly (no conversion step) and writes `TRANSA
 
 **Comparing the two:** `tests/compare-cbtrn02c.sh` runs the COBOL program and the Java port on the sample data and checks every output file from both against a saved copy of the COBOL results in `tests/golden/cbtrn02c/` (SYSOUT, transactions, accounts, category balances, rejects). It ignores trailing spaces and the processing timestamp in TRANSACT (columns 305-330), because that is the time of the run. Anything else that differs fails the check, and the script prints the differing lines. The Maven build also runs the same comparison for the Java port alone.
 
-**On every change:** the GitHub Actions workflow `.github/workflows/cbtrn02c.yml` runs the Maven build and `tests/compare-cbtrn02c.sh` on every pull request and every push to `main`.
+**Edge cases:** the sample data only produces over-limit rejects, so `tests/data/cbtrn02c-edge/` adds 23 hand-made transactions covering every reject reason and boundary. The cases include: unknown card (100), card whose account is missing (101), exactly at the limit vs one cent over (102), a return rejected as over limit, posting on the expiration date vs the day after (103), and 103 winning over 102. They also cover zero and largest amounts, an amount that overflows a balance field (both versions drop the high-order digits, as COBOL does), and new category balance records. Each case is described in `tests/cbtrn02c_data.py` (`edge()`), which also regenerates the files. The COBOL results are saved in `tests/golden/cbtrn02c-edge/`:
+
+```bash
+tests/compare-cbtrn02c.sh tests/data/cbtrn02c-edge tests/golden/cbtrn02c-edge
+```
+
+**Random batches:** `tests/fuzz-cbtrn02c.py [FIRST_SEED] [COUNT]` builds random batches (accounts, cards, category balances and up to 300 transactions each), runs both versions on each one and stops at the first difference. It prints the seed so the failing batch can be rebuilt with `tests/cbtrn02c_data.py random SEED DIR`. These are compared COBOL against Java directly, with no saved baseline. 200 batches take about 2 minutes.
+
+**On every change:** the GitHub Actions workflow `.github/workflows/cbtrn02c.yml` runs the Maven build, both baseline comparisons and 200 random batches on every pull request and every push to `main`.
 
 **If the results are meant to change** (for example, an agreed change to the over-limit rule), update the COBOL and Java code together. Then run `./run-cbtrn02c.sh` and copy the new files from `gnucobol/work/` into `tests/golden/cbtrn02c/`: `sysout.txt`, `rejects.txt` as `DALYREJS.txt`, and `data/<name>.after.txt` as `<name>.txt` for TRANSACT, ACCTDATA and TCATBALF.
 

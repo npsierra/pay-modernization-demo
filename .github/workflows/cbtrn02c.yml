@@ -28,13 +28,21 @@ jobs:
         working-directory: java
         run: mvn -B package
 
-      - name: Compare COBOL and Java outputs with the baseline
+      - name: Compare COBOL and Java outputs with the baseline (sample data)
         run: tests/compare-cbtrn02c.sh
+
+      - name: Compare COBOL and Java outputs with the baseline (edge cases)
+        run: tests/compare-cbtrn02c.sh tests/data/cbtrn02c-edge tests/golden/cbtrn02c-edge
+
+      - name: Random batches, COBOL vs Java
+        run: tests/fuzz-cbtrn02c.py 1 200
 
       - name: Keep outputs for inspection
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: cbtrn02c-outputs
-          path: build/cbtrn02c-compare/
+          path: |
+            build/cbtrn02c-compare/
+            build/cbtrn02c-fuzz/
           if-no-files-found: ignore
