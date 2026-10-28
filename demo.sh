@@ -26,13 +26,13 @@ counts() { # counts <work dir>
   cut -c351-430 "$1/rejects.txt" | sed 's/ *$//' | sort | uniq -c | sed 's/^/  /'
 }
 
-run() { # run <work dir> [VAR=value ...] -- runs CBTRN02C, keeps the log, tolerates rc 4
+run() { # run <work dir> [VAR=value ...] -- runs CBTRN02C, keeps the log, accepts rc 0 or 4 (some rejected)
   local work="$1"; shift
   set +e
   env "$@" WORK_DIR="$work" "$ROOT/run-cbtrn02c.sh" > "$work.log" 2>&1
   local rc=$?
   set -e
-  if [ "$rc" -gt 4 ]; then echo "run failed (rc $rc), see $work.log"; exit "$rc"; fi
+  if [ "$rc" -ne 0 ] && [ "$rc" -ne 4 ]; then echo "run failed (rc $rc), see $work.log:"; tail -3 "$work.log"; exit "$rc"; fi
   echo " Return code: $rc"
 }
 
