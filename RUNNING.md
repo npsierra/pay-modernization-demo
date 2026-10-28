@@ -126,6 +126,51 @@ java -cp java/target/cbtrn02c.jar com.carddemo.posttran.IntcalcMain --input-dir 
 - Interest is charged on negative balances too (a negative interest transaction), and amounts are truncated, not rounded.
 - `1400-COMPUTE-FEES` is an empty placeholder.
 
+## Account file extract (CBACT01C)
+
+`app/jcl/READACCT.jcl` (STEP05) runs `CBACT01C`. It reads every account in the account KSDS (300-byte records, key = 11-digit account ID, copybook `CVACT01Y`), displays it, and writes three extract files. It has no PARM and rejects nothing: it ends with return code 0, or abends with U0999 (exit code 16 locally) if a file can't be opened, read or written.
+
+```bash
+./run-cbact01c.sh                                     # INPUT_DIR, WORK_DIR optional
+tests/compare-cbact01c.sh                             # COBOL and Java vs tests/golden/cbact01c
+tests/compare-cbact01c.sh tests/data/cbact01c-edge tests/golden/cbact01c-edge
+tests/compare-cbact01c.sh tests/data/cbact01c-empty tests/golden/cbact01c-empty
+tests/compare-cbact01c.sh tests/data/cbact01c-abend tests/golden/cbact01c-abend 16
+tests/fuzz-cbtrn02c.py 1 200 cbact01c
+tests/cbact01c_view.py gnucobol/work-cbact01c/data   # readable view of the binary outputs
+java -cp java/target/cbtrn02c.jar com.carddemo.posttran.Cbact01cMain --input-dir DIR --output-dir DIR
+```
+
+| DD | Use | JCL format | Local file (`WORK_DIR/data/`) |
+|---|---|---|---|
+| `ACCTFILE` | input, read in key order | VSAM KSDS, 300 bytes, key 11 bytes | `ACCTDATA.idx`, loaded from `acctdata.txt` with `KSDSUTIL LOAD ACCT` |
+| `OUTFILE` | output | RECFM=FB, LRECL=107 | `OUTFILE.dat` |
+| `ARRYFILE` | output | RECFM=FB, LRECL=110 | `ARRYFILE.dat` |
+| `VBRCFILE` | output | RECFM=VB, LRECL=84 | `VBRCFILE.dat` |
+
+**How the outputs are stored off-mainframe.** The three outputs are binary files with no line endings, compared byte for byte (no masking; nothing in them depends on the run time).
+- *Text and zoned amounts* (`PIC X`, `PIC S9(10)V99`) are ASCII bytes. Signs stay as overpunch characters (`{`, `A`-`I`, `}`, `J`-`R`), the same as the input data, because the program is compiled with `-fsign=EBCDIC`.
+- *COMP-3 amounts* (`PIC S9(10)V99 COMP-3`, 7 bytes) are real packed decimal: two digits per byte, sign in the last half-byte (`C` positive, `D` negative). For example 2525.00 is `00 00 00 02 52 50 0C`. Packed bytes don't depend on the character set, so they are the same bytes z/OS would write.
+- *OUTFILE / ARRYFILE* are fixed-length records written back to back (107 / 110 bytes each).
+- *VBRCFILE* records are preceded by a 4-byte header: a 2-byte big-endian length of the data and 2 zero bytes (GnuCOBOL's `COB_VARSEQ_FORMAT=0`, pinned in `run-cbact01c.sh`). A z/OS record descriptor word has the same layout but its length also counts the 4 header bytes (16 and 43 here instead of 12 and 39); block descriptor words are not represented.
+
+**COBOL changes: none.** Platform stand-ins:
+- `gnucobol/COBDATFT.cbl`: CBACT01C calls the assembler routine `app/asm/COBDATFT.asm` to reformat the reissue date. It can't run off-mainframe, so this COBOL module takes the same 80-byte parameter (`CODATECN`) and makes the same byte moves and checks as the assembler, including returning 0 even after `INVALID INPUT`.
+- `gnucobol/CEE3ABD.cbl` (existing) for the abend; `KSDSUTIL LOAD ACCT` (existing) for the KSDS.
+
+**Results on the sample data:** 50 accounts read; 50 OUTFILE records (5,350 bytes), 50 ARRYFILE records (5,500 bytes), 100 VBRCFILE records (2,950 bytes); return code 0.
+
+**Tests:** the sample baseline; 14 hand-made accounts (`tests/data/cbact01c-edge`: zero, negative-zero and non-zero cycle debits, unsigned digits, maximum and negative amounts, odd and blank dates, status/group/filler values, short and CRLF lines, the highest account ID); an empty account file; a missing account file (abend, rc 16); and 200 random account files (2,966 accounts). All match byte for byte. JUnit: `AccountExtractBaselineTest`.
+
+**Mutation check:** changing the cycle-debit rule in `AccountExtract.populateOutRecord` from "cycle debit = 0" to "cycle debit >= 0" still matched the sample data (every sample account has a zero cycle debit), but the edge-case comparison (OUTFILE differs) and the random batches (seed 1) both failed. Reverted.
+
+**Behaviour kept as in the original (findings, not fixed):**
+- **OUTFILE's cycle debit is not the account's cycle debit.** It is set to a fixed 2525.00 only when the account's cycle debit is zero. Otherwise the field keeps whatever the previous record left in the output area; for the first record that is binary zeros, which isn't a valid packed number.
+- **ARRYFILE holds made-up values:** slots 1-2 are the balance with fixed debits 1005.00 and 1525.00, slot 3 is a fixed -1025.00 / -2500.00, slots 4-5 are zero.
+- **The reissue date is reformatted with an odd call:** the program passes input type 2 (`YYYY-MM-DD`) and output type 2. The assembler accepts any output type except 1 and doesn't check the separators, so the date comes out as `YYYYMMDD` followed by 2 bytes left over from earlier calls (spaces here). A date without dashes loses digits (`20250520` becomes `202552`).
+- **The output files are never closed** by the program (only ACCTFILE is); GnuCOBOL closes them at the end and logs `implicit CLOSE` warnings. Every account is displayed twice in SYSOUT (field by field, then as the full record).
+- **Displaying an amount changes the record:** with `-fsign=EBCDIC`, GnuCOBOL rewrites the sign of each amount it displays, so an unsigned last digit becomes a positive overpunch (`5` becomes `E`) in the record displayed afterwards. The sample data always has signs, so this only shows with the edge and random data. The Java port does the same.
+
 ## Demo walkthrough
 
 `./demo.sh` runs the CBTRN02C story one step at a time, pausing for Enter between steps (`DEMO_NO_PAUSE=1` runs straight through): the original COBOL (38 rejects), the sign bug with `SIGN_ENCODING=ASCII` (43 rejects), the Java port, then the file-by-file comparison against the saved baseline. Outputs go to `build/demo/`. It needs the same setup as the Java port above.
