@@ -8,7 +8,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA="${INPUT_DIR:-$ROOT/app/data/ASCII}"
 WORK="${WORK_DIR:-$ROOT/gnucobol/work}"
 # Sign convention used to read signed amounts: EBCDIC (correct for this data) or ASCII
-# (reproduces the misread you get without the flag -- 43 rejects instead of 38).
+# (reproduces the misread you get without the flag -- 299 of 300 rejected instead of 38 on GnuCOBOL 3.2).
 SIGN_ENCODING="${SIGN_ENCODING:-EBCDIC}"
 BIN="$WORK/bin"
 DD="$WORK/data"
