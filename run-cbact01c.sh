@@ -10,7 +10,7 @@ WORK="${WORK_DIR:-$ROOT/gnucobol/work-cbact01c}"
 BIN="$WORK/bin"
 DD="$WORK/data"
 
-[ "$(cd "$WORK" 2>/dev/null && pwd || echo "$WORK")" != "/" ] || { echo "WORK_DIR must not be /" >&2; exit 8; }
+[ "$(cd "$WORK" 2>/dev/null && pwd -P || echo "$WORK")" != "/" ] || { echo "WORK_DIR must not be /" >&2; exit 8; }
 
 command -v cobc >/dev/null || { echo "cobc not found: install GnuCOBOL (Ubuntu: sudo apt-get install -y gnucobol, macOS: brew install gnucobol)" >&2; exit 1; }
 
