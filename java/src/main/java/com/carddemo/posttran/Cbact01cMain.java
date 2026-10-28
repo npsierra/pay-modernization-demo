@@ -1,7 +1,6 @@
 package com.carddemo.posttran;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -52,7 +51,9 @@ public final class Cbact01cMain {
             Files.write(outputDir.resolve("VBRCFILE.dat"), extract.vbrcFile());
             return 0;
         } catch (IOException e) {
-            throw new UncheckedIOException(e);
+            // 2000-4000 open / 1350-1575 write failures: the COBOL displays the status and abends.
+            System.out.println("ERROR WRITING OUTPUT FILES: " + e.getMessage());
+            return abend();
         } catch (RuntimeException e) {
             System.out.println(e.getMessage());
             return abend();
