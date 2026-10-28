@@ -5,6 +5,8 @@ in the same ASCII layout as app/data/ASCII.
   cbtrn02c_data.py edge OUT_DIR           hand-made cases for every reject reason and boundary
   cbtrn02c_data.py random SEED OUT_DIR    a random batch (same seed = same files)
   cbtrn02c_data.py intcalc SEED OUT_DIR   random CBACT04C input (tcatbal, acctdata, cardxref, discgrp)
+  cbtrn02c_data.py extract-edge OUT_DIR   hand-made CBACT01C cases (acctdata.txt only)
+  cbtrn02c_data.py extract SEED OUT_DIR   random CBACT01C input (acctdata.txt only)
 """
 import random
 import sys
@@ -235,6 +237,105 @@ def write(out_dir, trans, xrefs, accounts, tcatbals):
         (out / name).write_text("".join(line + "\n" for line in lines), encoding="ascii")
 
 
+def raw_account(acct_id, cycle_debit="00000000000{", balance="00000001940{", limit="00000020200{",
+                cash_limit="00000010200{", cycle_credit="00000000000{", status="Y", open_date="2014-11-20",
+                expiration="2025-05-20", reissue="2025-05-20", zip_code="A000000000", group="", filler=""):
+    """CBACT01C account record built from raw field text, so sign styles can be chosen exactly."""
+    record = (f"{acct_id:011d}" + status + balance + limit + cash_limit + open_date + expiration + reissue
+              + cycle_credit + cycle_debit + fixed(zip_code, 10) + fixed(group, 10) + fixed(filler, 178))
+    assert len(record) == 300, len(record)
+    return record
+
+
+def extract_edge():
+    """CBACT01C cases, in key order (the order matters: OUTFILE's cycle debit carries over)."""
+    return [
+        # First record, cycle debit not zero: OUTFILE debit is the record area's initial bytes.
+        raw_account(1, cycle_debit="00000001000}"),
+        # Still no zero debit seen: the initial bytes carry over again.
+        raw_account(2, cycle_debit="00000000500A"),
+        # Negative zero counts as zero: OUTFILE debit becomes 2525.00.
+        raw_account(3, cycle_debit="00000000000}"),
+        # Non-zero debit: inherits 2525.00 from account 3.
+        raw_account(4, cycle_debit="00000123456R"),
+        # Zero with a plain last digit (no sign): also zero.
+        raw_account(5, cycle_debit="000000000000"),
+        # Plain last digits are re-signed by the MOVE ('5' -> 'E'); negative zero stays '}'.
+        raw_account(6, balance="000000012345", limit="00000000000}", cash_limit="000000000000",
+                    cycle_credit="000000000005"),
+        # Negative balance, largest and most negative values.
+        raw_account(7, balance="99999999999I", limit="99999999999R", cash_limit="00000000001J",
+                    cycle_credit="99999999999R", cycle_debit="99999999999I"),
+        # Reissue date without dashes: COBDATFT copies fixed positions, giving '202552  '.
+        raw_account(8, reissue="20250520  "),
+        # All dates blank.
+        raw_account(9, open_date=" " * 10, expiration=" " * 10, reissue=" " * 10),
+        # Other separators are not checked (the check is commented out in COBDATFT).
+        raw_account(10, reissue="2025/05/20"),
+        # Status, zip, group and filler text are copied or displayed as they are.
+        raw_account(11, status="N", zip_code="12345-6789", group="GOLD",
+                    filler="Filler text is displayed with the record but never written"),
+        # Short line (trailing spaces trimmed) and a CRLF line ending: padded / stripped on load.
+        raw_account(12, group="SILVER").rstrip(" "),
+        raw_account(13, status=" ", reissue="1999-12-31") + "\r",
+        raw_account(99999999999, balance="00000000001}"),
+    ]
+
+
+def extract_batch(seed):
+    """Random CBACT01C input: amounts in every sign style, zero and non-zero cycle debits in
+    random order, valid and odd reissue dates, random text in the other fields."""
+    rng = random.Random(seed)
+    text = "".join(chr(c) for c in range(32, 127))
+
+    def amount():
+        roll = rng.random()
+        digits = f"{rng.randint(0, 10 ** rng.randint(1, 12) - 1):012d}"
+        if roll < 0.05:
+            return "00000000000}"
+        if roll < 0.15:
+            return digits
+        sign = NEGATIVE if roll < 0.55 else POSITIVE
+        return digits[:-1] + sign[int(digits[-1])]
+
+    def date():
+        roll = rng.random()
+        yyyy, mm, dd = rng.randint(1990, 2035), rng.randint(1, 12), rng.randint(1, 28)
+        if roll < 0.7:
+            return f"{yyyy}-{mm:02d}-{dd:02d}"
+        if roll < 0.8:
+            return f"{yyyy}{mm:02d}{dd:02d}  "
+        if roll < 0.9:
+            return " " * 10
+        return "".join(rng.choice(text) for _ in range(10))
+
+    def words(width):
+        return "".join(rng.choice(text) for _ in range(rng.randint(0, width)))
+
+    count = 0 if rng.random() < 0.05 else rng.randint(1, 30)
+    records = []
+    for acct_id in sorted(rng.sample(range(1, 10 ** 11), count)):
+        debit = rng.choice(["00000000000{", "00000000000}", "000000000000"]) if rng.random() < 0.3 else amount()
+        record = raw_account(acct_id, cycle_debit=debit, balance=amount(), limit=amount(), cash_limit=amount(),
+                             cycle_credit=amount(), status=rng.choice("YYYN X"), open_date=date(),
+                             expiration=date(), reissue=date(), zip_code=words(10), group=words(10),
+                             filler=words(178))
+        roll = rng.random()
+        if roll < 0.1:
+            record = record.rstrip(" ")
+        elif roll < 0.2:
+            record += "\r"
+        records.append(record)
+    return records
+
+
+def write_extract(out_dir, accounts):
+    """acctdata.txt for CBACT01C; records ending in '\\r' are written with CRLF line endings."""
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "acctdata.txt").write_bytes("".join(line + "\n" for line in accounts).encode("ascii"))
+
+
 def main(argv):
     if len(argv) == 3 and argv[1] == "edge":
         write(argv[2], *edge())
@@ -242,6 +343,10 @@ def main(argv):
         write(argv[3], *random_batch(int(argv[2])))
     elif len(argv) == 4 and argv[1] == "intcalc":
         write_intcalc(argv[3], *intcalc_batch(int(argv[2])))
+    elif len(argv) == 3 and argv[1] == "extract-edge":
+        write_extract(argv[2], extract_edge())
+    elif len(argv) == 4 and argv[1] == "extract":
+        write_extract(argv[3], extract_batch(int(argv[2])))
     else:
         sys.exit(__doc__)
 

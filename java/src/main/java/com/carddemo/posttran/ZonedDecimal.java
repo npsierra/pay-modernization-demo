@@ -51,6 +51,32 @@ final class ZonedDecimal {
     }
 
     /**
+     * MOVE between two signed DISPLAY fields of the same picture (GnuCOBOL, -fsign=EBCDIC):
+     * the digits and the sign are kept, and a plain last digit (no sign) becomes a positive
+     * overpunch. A negative zero stays negative ({@code '}'}).
+     */
+    static String move(String field) {
+        decode(field, 0);
+        char last = field.charAt(field.length() - 1);
+        if (last >= '0' && last <= '9') {
+            return field.substring(0, field.length() - 1) + POSITIVE.charAt(last - '0');
+        }
+        return field;
+    }
+
+    /**
+     * DISPLAY of a signed DISPLAY field as GnuCOBOL prints it: a sign by value ('+' for any
+     * zero), the integer digits, a decimal point and the decimals, e.g. {@code -0000000194.00}.
+     */
+    static String display(String field, int scale) {
+        BigDecimal value = decode(field, scale);
+        String digits = field.substring(0, field.length() - 1)
+                + value.unscaledValue().abs().mod(BigInteger.TEN);
+        int point = digits.length() - scale;
+        return (value.signum() < 0 ? "-" : "+") + digits.substring(0, point) + "." + digits.substring(point);
+    }
+
+    /**
      * COBOL arithmetic without ON SIZE ERROR keeps only the low-order digits that fit the
      * receiving field; extra decimals are dropped, not rounded.
      */
