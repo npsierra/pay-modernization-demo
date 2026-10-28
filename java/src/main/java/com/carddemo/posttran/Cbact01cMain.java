@@ -73,6 +73,7 @@ public final class Cbact01cMain {
             outputs[0].write(extract.outFile());
             outputs[1].write(extract.arryFile());
             outputs[2].write(extract.vbrcFile());
+            extract.end();
             return 0;
         } catch (IOException e) {
             // 1350-1575 write failures: the COBOL displays the status and abends.
