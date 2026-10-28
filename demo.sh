@@ -6,6 +6,9 @@
 # Press Enter between steps; set DEMO_NO_PAUSE=1 to run straight through.
 set -euo pipefail
 
+# The demo always uses the bundled sample data and sets each run's options itself.
+unset INPUT_DIR WORK_DIR SIGN_ENCODING
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT="$ROOT/build/demo"
 JAR="$ROOT/java/target/cbtrn02c.jar"
@@ -35,13 +38,13 @@ counts() { # counts <work dir>
   cut -c351-430 "$1/rejects.txt" | sed 's/ *$//' | sort | uniq -c | sed 's/^/  /'
 }
 
-run() { # run <work dir> [VAR=value ...] -- runs CBTRN02C, keeps the log, tolerates rc 4
+run() { # run <work dir> [VAR=value ...] -- runs CBTRN02C, keeps the log, accepts rc 0 or 4 (some rejected)
   local work="$1"; shift
   set +e
   env "$@" WORK_DIR="$work" "$ROOT/run-cbtrn02c.sh" > "$work.log" 2>&1
   local rc=$?
   set -e
-  if [ "$rc" -gt 4 ]; then echo "run failed (rc $rc), see $work.log"; exit "$rc"; fi
+  if [ "$rc" -ne 0 ] && [ "$rc" -ne 4 ]; then echo "run failed (rc $rc), see $work.log:"; tail -3 "$work.log"; exit "$rc"; fi
   echo " Return code: $rc"
 }
 
@@ -74,7 +77,7 @@ java -jar "$JAR" --input-dir "$ROOT/app/data/ASCII" --output-dir "$OUT/java" > "
 JAVA_RC=$?
 set -e
 echo " Return code: $JAVA_RC"
-if [ "$JAVA_RC" -gt 4 ]; then echo "Java run failed (rc $JAVA_RC), see $OUT/java.sysout.txt"; exit "$JAVA_RC"; fi
+if [ "$JAVA_RC" -ne 4 ]; then echo "Java run failed (expected rc 4), see $OUT/java.sysout.txt"; exit 1; fi
 grep -E 'TRANSACTIONS (PROCESSED|REJECTED)' "$OUT/java.sysout.txt" | tr -s ' '
 
 step "3. Prove it: COBOL and Java vs the saved COBOL baseline, file by file"
