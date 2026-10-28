@@ -75,6 +75,8 @@ CBTRN02C return code: 4
 ```bash
 sudo apt-get install -y openjdk-17-jdk maven   # Ubuntu
 brew install openjdk@17 maven                  # macOS
+# macOS: Homebrew leaves Java 17 off the PATH; add it once, then open a new terminal
+printf '%s\n' 'export PATH=/opt/homebrew/opt/openjdk@17/bin:$PATH' 'export JAVA_HOME=/opt/homebrew/opt/openjdk@17' >> ~/.zshrc
 cd java && mvn package                         # builds java/target/cbtrn02c.jar and runs the unit tests
 java -jar target/cbtrn02c.jar --input-dir ../app/data/ASCII --output-dir out
 ```

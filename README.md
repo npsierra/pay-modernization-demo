@@ -1,4 +1,63 @@
-# CardDemo - Mainframe Credit Card Management Application
+# Pay modernization demo: CardDemo COBOL batch jobs to Java, proven equivalent
+
+This repo takes batch programs from AWS's [CardDemo](https://github.com/aws-samples/aws-mainframe-modernization-carddemo) mainframe sample and moves them off the mainframe:
+
+1. Run the original COBOL, unchanged, on Linux or macOS with GnuCOBOL 3.2.
+2. Save its output as the baseline.
+3. Port the program to Java 17.
+4. Prove the COBOL and Java produce identical files on the sample data, hand-made edge cases and 200 random batches. A GitHub check repeats this on every pull request.
+
+Programs done so far: CBTRN02C (daily transaction posting), CBACT04C (interest calculation) and CBACT01C (account file extract). Details, results and findings for each are in [RUNNING.md](RUNNING.md).
+
+## Get the code
+
+```bash
+git clone https://github.com/npsierra/pay-modernization-demo.git
+cd pay-modernization-demo
+```
+
+## Install on macOS
+
+Needs [Homebrew](https://brew.sh). Then, in Terminal (from the repo folder):
+
+```bash
+brew install gnucobol openjdk@17 maven
+printf '%s\n' 'export PATH=/opt/homebrew/opt/openjdk@17/bin:$PATH' 'export JAVA_HOME=/opt/homebrew/opt/openjdk@17' >> ~/.zshrc
+```
+
+Open a new Terminal window and check the versions:
+
+```bash
+cobc --version | head -1   # cobc (GnuCOBOL) 3.2.0
+java -version              # openjdk version "17..."
+mvn -version
+```
+
+Homebrew doesn't put Java 17 on the PATH by itself, so the second line above does it (on an Intel Mac, use `/usr/local` instead of `/opt/homebrew`). You can skip the `sudo ln` symlink and `CPPFLAGS` hints that Homebrew prints; nothing here needs them.
+
+## Install on Ubuntu
+
+```bash
+sudo apt-get install -y openjdk-17-jdk maven python3
+gnucobol/install-gnucobol.sh   # installs its build tools, then builds GnuCOBOL 3.2 (apt only has 3.1.2)
+```
+
+## Run it
+
+```bash
+./run-cbtrn02c.sh              # original COBOL: posts 300 sample transactions, 38 rejected
+(cd java && mvn -B package)    # builds the Java and runs its unit tests
+./demo.sh                      # step by step: COBOL, Java, file comparison, a broken rule caught
+tests/compare-cbtrn02c.sh      # COBOL vs Java vs baseline on the sample data
+```
+
+The full list of checks the GitHub workflow runs is in [.github/workflows/cbtrn02c.yml](.github/workflows/cbtrn02c.yml).
+
+---
+
+The rest of this file is the original CardDemo README from AWS, unchanged apart from its title. The COBOL source under `app/` is AWS's, licensed under Apache 2.0 (see [LICENSE](LICENSE) and [NOTICE](NOTICE)).
+
+# Original CardDemo README (AWS)
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-Apache%202.0-green.svg)
