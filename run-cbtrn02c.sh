@@ -7,8 +7,14 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 DATA="${INPUT_DIR:-$ROOT/app/data/ASCII}"
 WORK="${WORK_DIR:-$ROOT/gnucobol/work}"
+# Sign convention used to read signed amounts: EBCDIC (correct for this data) or ASCII
+# (reproduces the misread you get without the flag -- 43 rejects instead of 38).
+SIGN_ENCODING="${SIGN_ENCODING:-EBCDIC}"
 BIN="$WORK/bin"
 DD="$WORK/data"
+
+case "$SIGN_ENCODING" in EBCDIC|ASCII) ;; *) echo "SIGN_ENCODING must be EBCDIC or ASCII" >&2; exit 8 ;; esac
+[ "$(cd "$WORK" 2>/dev/null && pwd -P || echo "$WORK")" != "/" ] || { echo "WORK_DIR must not be /" >&2; exit 8; }
 
 command -v cobc >/dev/null || { echo "cobc not found: install GnuCOBOL (Ubuntu: sudo apt-get install -y gnucobol, macOS: brew install gnucobol)" >&2; exit 1; }
 
@@ -17,9 +23,9 @@ rm -f "$WORK/sysout.txt" "$WORK/rejects.txt"
 mkdir -p "$BIN" "$DD"
 
 echo "== Compile"
-# -fsign=EBCDIC: the sample data stores signed amounts with mainframe overpunch
+# -fsign=EBCDIC (default): the sample data stores signed amounts with mainframe overpunch
 # signs ('{' = +0, 'A'..'I' = +1..+9, '}' = -0, 'J'..'R' = -1..-9).
-cobc -x -fsign=EBCDIC -I "$ROOT/app/cpy" -o "$BIN/CBTRN02C" "$ROOT/app/cbl/CBTRN02C.cbl"
+cobc -x -fsign="$SIGN_ENCODING" -I "$ROOT/app/cpy" -o "$BIN/CBTRN02C" "$ROOT/app/cbl/CBTRN02C.cbl"
 # Built in $BIN so cobc picks the platform module extension (.so on Linux, .dylib on macOS).
 (cd "$BIN" && cobc -m "$ROOT/gnucobol/CEE3ABD.cbl")
 cobc -x -o "$BIN/KSDSUTIL" "$ROOT/gnucobol/KSDSUTIL.cbl"
