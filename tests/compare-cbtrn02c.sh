@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Runs CBTRN02C two ways on one input set -- the original COBOL under GnuCOBOL and the
 # Java port -- and checks that both match a saved baseline of the COBOL results.
-# Usage: compare-cbtrn02c.sh [INPUT_DIR GOLDEN_DIR]
+# Usage: compare-cbtrn02c.sh [INPUT_DIR GOLDEN_DIR]   (CBTRN02C_JAR=<jar> tests a different Java build)
 #   default: app/data/ASCII against tests/golden/cbtrn02c (the repo's sample data)
 # Trailing spaces and the run-time processing timestamp (TRANSACT columns 305-330) are
 # ignored; everything else must be identical. Exits non-zero on any difference.
@@ -64,8 +64,13 @@ check cobol TCATBALF.txt "$COBOL_WORK/data/TCATBALF.after.txt"
 check cobol DALYREJS.txt "$COBOL_WORK/rejects.txt"
 
 echo "== Java =="
-JAR="$ROOT/java/target/cbtrn02c.jar"
-[ -f "$JAR" ] || (cd "$ROOT/java" && mvn -q -B package -DskipTests)
+JAR="${CBTRN02C_JAR:-$ROOT/java/target/cbtrn02c.jar}"
+if [ ! -f "$JAR" ]; then
+  if [ -n "${CBTRN02C_JAR:-}" ]; then
+    echo "CBTRN02C_JAR not found: $JAR" >&2; exit 2
+  fi
+  (cd "$ROOT/java" && mvn -q -B package -DskipTests)
+fi
 set +e
 java -jar "$JAR" --input-dir "$INPUT" --output-dir "$JAVA_OUT" > "$JAVA_OUT/sysout.txt" 2> "$OUT/java.err"
 JAVA_RC=$?
