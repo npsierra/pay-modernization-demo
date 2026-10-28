@@ -56,6 +56,21 @@ class AccountExtractBaselineTest {
     }
 
     @Test
+    void abendsWhenAnOutputCannotBeWritten(@TempDir Path dir) throws IOException {
+        Path notADirectory = Files.writeString(dir.resolve("out"), "");
+        PrintStream original = System.out;
+        int returnCode;
+        try {
+            System.setOut(new PrintStream(new ByteArrayOutputStream(), true, StandardCharsets.ISO_8859_1));
+            returnCode = Cbact01cMain.run(new String[] {"--input-dir", ROOT.resolve("app/data/ASCII").toString(),
+                    "--output-dir", notADirectory.toString()});
+        } finally {
+            System.setOut(original);
+        }
+        assertEquals(Main.ABEND, returnCode);
+    }
+
+    @Test
     void packsSignedAmounts() {
         assertArrayEquals(new byte[] {0, 0, 0, 0x02, 0x52, 0x50, 0x0C},
                 PackedDecimal.encode(new BigDecimal("2525.00"), 10, 2));
