@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 # Compile and run the CardDemo daily transaction posting batch (CBTRN02C)
 # off-mainframe with GnuCOBOL, mirroring app/jcl/POSTTRAN.jcl.
-# Every run rebuilds the input files from app/data/ASCII, so runs are repeatable.
+# Every run rebuilds the input files from app/data/ASCII (or INPUT_DIR), so runs are repeatable.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-DATA="$ROOT/app/data/ASCII"
+DATA="${INPUT_DIR:-$ROOT/app/data/ASCII}"
 WORK="${WORK_DIR:-$ROOT/gnucobol/work}"
 BIN="$WORK/bin"
 DD="$WORK/data"

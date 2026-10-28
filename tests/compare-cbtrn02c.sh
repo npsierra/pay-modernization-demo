@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
-# Runs CBTRN02C two ways on the sample data -- the original COBOL under GnuCOBOL and the
-# Java port -- and checks that both match the saved baseline in tests/golden/cbtrn02c.
+# Runs CBTRN02C two ways on one input set -- the original COBOL under GnuCOBOL and the
+# Java port -- and checks that both match a saved baseline of the COBOL results.
+# Usage: compare-cbtrn02c.sh [INPUT_DIR GOLDEN_DIR]
+#   default: app/data/ASCII against tests/golden/cbtrn02c (the repo's sample data)
 # Trailing spaces and the run-time processing timestamp (TRANSACT columns 305-330) are
 # ignored; everything else must be identical. Exits non-zero on any difference.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-GOLDEN="$ROOT/tests/golden/cbtrn02c"
-OUT="$ROOT/build/cbtrn02c-compare"
+INPUT="$(cd "${1:-$ROOT/app/data/ASCII}" && pwd)"
+GOLDEN="$(cd "${2:-$ROOT/tests/golden/cbtrn02c}" && pwd)"
+OUT="$ROOT/build/cbtrn02c-compare/$(basename "$GOLDEN")"
 COBOL_WORK="$OUT/cobol"
 JAVA_OUT="$OUT/java"
 rm -rf "$OUT"
@@ -47,9 +50,10 @@ expect_rc() { # expect_rc <label> <actual rc>
   fi
 }
 
+echo "== Input: $INPUT"
 echo "== COBOL (GnuCOBOL) =="
 set +e
-WORK_DIR="$COBOL_WORK" "$ROOT/run-cbtrn02c.sh" > "$OUT/cobol.log" 2>&1
+INPUT_DIR="$INPUT" WORK_DIR="$COBOL_WORK" "$ROOT/run-cbtrn02c.sh" > "$OUT/cobol.log" 2>&1
 COBOL_RC=$?
 set -e
 expect_rc COBOL "$COBOL_RC"
@@ -63,7 +67,7 @@ echo "== Java =="
 JAR="$ROOT/java/target/cbtrn02c.jar"
 [ -f "$JAR" ] || (cd "$ROOT/java" && mvn -q -B package -DskipTests)
 set +e
-java -jar "$JAR" --input-dir "$ROOT/app/data/ASCII" --output-dir "$JAVA_OUT" > "$JAVA_OUT/sysout.txt" 2> "$OUT/java.err"
+java -jar "$JAR" --input-dir "$INPUT" --output-dir "$JAVA_OUT" > "$JAVA_OUT/sysout.txt" 2> "$OUT/java.err"
 JAVA_RC=$?
 set -e
 expect_rc Java "$JAVA_RC"
@@ -77,4 +81,4 @@ if [ "$FAILED" -ne 0 ]; then
   echo "RESULT: outputs differ from the baseline (details above; logs in $OUT)"
   exit 1
 fi
-echo "RESULT: COBOL and Java both match the baseline (300 read, 262 posted, 38 rejected)"
+echo "RESULT: COBOL and Java both match $GOLDEN ($(grep -m1 'TRANSACTIONS PROCESSED' "$GOLDEN/sysout.txt" | tr -s ' '), $(wc -l < "$OUT/normalized/expected-DALYREJS.txt" | tr -d ' ') rejected)"
