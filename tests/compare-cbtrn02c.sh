@@ -65,7 +65,12 @@ check cobol DALYREJS.txt "$COBOL_WORK/rejects.txt"
 
 echo "== Java =="
 JAR="${CBTRN02C_JAR:-$ROOT/java/target/cbtrn02c.jar}"
-[ -f "$JAR" ] || (cd "$ROOT/java" && mvn -q -B package -DskipTests)
+if [ ! -f "$JAR" ]; then
+  if [ -n "${CBTRN02C_JAR:-}" ]; then
+    echo "CBTRN02C_JAR not found: $JAR" >&2; exit 2
+  fi
+  (cd "$ROOT/java" && mvn -q -B package -DskipTests)
+fi
 set +e
 java -jar "$JAR" --input-dir "$INPUT" --output-dir "$JAVA_OUT" > "$JAVA_OUT/sysout.txt" 2> "$OUT/java.err"
 JAVA_RC=$?
