@@ -103,6 +103,29 @@ tests/compare-cbtrn02c.sh tests/data/cbtrn02c-edge tests/golden/cbtrn02c-edge
 
 **If the results are meant to change** (for example, an agreed change to the over-limit rule), update the COBOL and Java code together. Then run `./run-cbtrn02c.sh` and copy the new files from `gnucobol/work/` into `tests/golden/cbtrn02c/`: `sysout.txt`, `rejects.txt` as `DALYREJS.txt`, and `data/<name>.after.txt` as `<name>.txt` for TRANSACT, ACCTDATA and TCATBALF.
 
+## Next job in the chain: interest calculation (CBACT04C)
+
+`app/jcl/INTCALC.jcl` runs `CBACT04C` with `PARM='2022071800'` on the category balances and accounts that CBTRN02C just updated. For each category balance it looks up the account's interest rate in the disclosure groups (`discgrp.txt`), falling back to the `DEFAULT` group. It writes one interest transaction per balance with a non-zero rate (`SYSTRAN`), and adds the interest to the account balance and zeroes the cycle credit and debit.
+
+```bash
+./run-chain.sh                  # CBTRN02C, then CBACT04C on its output
+./run-cbact04c.sh               # CBACT04C alone (INPUT_DIR, WORK_DIR, PARM_DATE optional)
+tests/compare-cbact04c.sh       # COBOL and Java vs tests/golden/cbact04c (chained run)
+tests/fuzz-cbtrn02c.py 1 200 cbact04c
+java -cp java/target/cbtrn02c.jar com.carddemo.posttran.IntcalcMain --input-dir DIR --output-dir DIR
+```
+
+**COBOL changes: none.** Platform stand-ins:
+- `gnucobol/RUNPARM.cbl`: on z/OS the JCL `PARM` reaches the program through `PROCEDURE DIVISION USING` as a halfword length plus text. A GnuCOBOL executable can't receive it that way, so CBACT04C is built as a module and RUNPARM passes the PARM the same way.
+- `KSDSUTIL LOAD XREFAIX`: CBACT04C reads the card cross-reference by account ID through the alternate index (`XREFFIL1` / `CARDXREF.VSAM.AIX`, non-unique). The loaded file carries that alternate key; with several cards per account the first one in card-number order is returned. `KSDSUTIL LOAD DISCGRP` loads the disclosure groups.
+
+**Results (chained after CBTRN02C on the sample data):** 100 category balances read, 50 interest transactions written (purchases; returns have a 0% rate), 49 of 50 accounts updated. Every sample account has a blank group ID, so all rates come from `DEFAULT`.
+
+**Behaviour kept as in the original (findings, not fixed):**
+- **The last account in the file is never updated.** The program updates an account only when the next balance belongs to a different account. Its end-of-file branch can never run, so account 50 gets its interest transaction, but its balance and cycle totals are left as they were.
+- Interest is charged on negative balances too (a negative interest transaction), and amounts are truncated, not rounded.
+- `1400-COMPUTE-FEES` is an empty placeholder.
+
 ## Things to know
 
 - **How the over-limit check works:** it computes `cycle credit - cycle debit + amount` and compares that with the credit limit. Returns are negative and are added to cycle debit, so subtracting the debit makes each return *increase* the amount compared with the limit. If returns were instead netted against purchases, 23 transactions would be rejected rather than 38. This is the original program's behavior and has not been changed.
