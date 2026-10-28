@@ -126,6 +126,10 @@ java -cp java/target/cbtrn02c.jar com.carddemo.posttran.IntcalcMain --input-dir 
 - Interest is charged on negative balances too (a negative interest transaction), and amounts are truncated, not rounded.
 - `1400-COMPUTE-FEES` is an empty placeholder.
 
+## Demo walkthrough
+
+`./demo.sh` runs the CBTRN02C story one step at a time, pausing for Enter between steps (`DEMO_NO_PAUSE=1` runs straight through): the original COBOL (38 rejects), the sign bug with `SIGN_ENCODING=ASCII` (43 rejects), the Java port, then the file-by-file comparison against the saved baseline. Outputs go to `build/demo/`. It needs the same setup as the Java port above.
+
 ## Things to know
 
 - **How the over-limit check works:** it computes `cycle credit - cycle debit + amount` and compares that with the credit limit. Returns are negative and are added to cycle debit, so subtracting the debit makes each return *increase* the amount compared with the limit. If returns were instead netted against purchases, 23 transactions would be rejected rather than 38. This is the original program's behavior and has not been changed.
