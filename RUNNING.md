@@ -203,9 +203,9 @@ The report is plain text with no run-time timestamps, so the comparison only ign
 
 **Results on the sample data:** 262 transactions; 451 report lines: 262 detail lines, 49 account totals, 15 page totals, grand total 78,720.36; return code 0.
 
-**Tests:** the sample baseline and 9 hand-made cases in `tests/data/cbtrn03c-*`, each described in `tests/cbtrn03c_data.py` (`edge()`):
+**Tests:** the sample baseline and 10 hand-made cases in `tests/data/cbtrn03c-*`, each described in `tests/cbtrn03c_data.py` (`edge()`):
 - `edge` (49 detail lines): first and last day of the range and the days just outside it, two cards on one account, zero, negative-zero, unsigned and largest amounts, totals that overflow, descriptions longer than the report columns, CRLF and short lookup lines, equal cards out of transaction-ID order, page breaks from detail lines and from account totals.
-- `empty` (empty transaction file), `blankparm` (blank dates, no transactions), `stop` (an out-of-range date in the middle of already-sorted input): return code 0.
+- `empty` (empty transaction file), `blankparm` (blank dates, no transactions), `blankcard` (a blank first card: no lookup, account ID prints as zeros), `stop` (an out-of-range date in the middle of already-sorted input): return code 0.
 - `badcard`, `badtype`, `badcatg` (lookup failures after part of the report is written), `missing` (no transaction file), `noparm` (no DATEPARM file): abend, return code 16.
 
 200 random batches (4,489 detail lines; 10 end in a lookup abend, 31 print no totals) also match. JUnit: `TransactionReportBaselineTest`.
@@ -217,6 +217,7 @@ The report is plain text with no run-time timestamps, so the comparison only ign
 - **The last transaction is counted twice:** at end of file its amount is added again to the page and grand totals. The sample grand total, 78,720.36, includes 765.66 twice; the transactions add up to 77,954.70.
 - **A date outside the range silently ends the report:** the first such transaction stops the run with no page or grand total and return code 0. On the mainframe the SORT step filters by date first, which hides this.
 - **An empty transaction file gives an empty report** (no headings, no totals) with return code 0, and so does an empty DATEPARM file.
+- **A blank first card is never looked up:** it equals the initial current card, so no lookup happens and its account ID prints as zeros.
 - **Blank dates are accepted:** a DATEPARM line of spaces with no transactions prints a page total and grand total of zero.
 - **Totals are per card, not per account:** two cards on one account get separate "Account Total" lines.
 - **Page length varies:** a new page starts only when the line counter is exactly a multiple of 20, and the 2-line account total can step past it, so pages on the sample report run from 20 to 60 lines.
