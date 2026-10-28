@@ -1,6 +1,8 @@
 # Pay modernization demo: CardDemo COBOL batch jobs to Java, proven equivalent
 
-This repo takes batch programs from AWS's [CardDemo](https://github.com/aws-samples/aws-mainframe-modernization-carddemo) mainframe sample and moves them off the mainframe:
+Demonstration of modernizing legacy COBOL applications off-mainframe with GnuCOBOL and Java 17 using AWS [CardDemo](https://github.com/aws-samples/aws-mainframe-modernization-carddemo), with COBOL and Java proven equivalent on every PR.
+
+For each CardDemo batch program:
 
 1. Run the original COBOL, unchanged, on Linux or macOS with GnuCOBOL 3.2.
 2. Save its output as the baseline.
