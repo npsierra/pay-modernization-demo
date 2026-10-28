@@ -10,6 +10,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 GOLDEN="$(cd "${2:-$ROOT/tests/golden/cbact04c}" && pwd)"
 OUT="$ROOT/build/cbact04c-compare/$(basename "$GOLDEN")"
+rel() { case "$1" in "$ROOT"/*) printf '%s\n' "${1#"$ROOT"/}";; *) printf '%s\n' "$1";; esac; } # show paths relative to the repo
 rm -rf "$OUT"
 mkdir -p "$OUT/cobol" "$OUT/java" "$OUT/normalized"
 if [ -n "${1:-}" ]; then
@@ -56,7 +57,7 @@ expect_rc() { # expect_rc <label> <actual rc>
   fi
 }
 
-echo "== Input: $INPUT"
+echo "== Input: $(rel "$INPUT")"
 echo "== COBOL (GnuCOBOL) =="
 set +e
 INPUT_DIR="$INPUT" WORK_DIR="$OUT/cobol" "$ROOT/run-cbact04c.sh" > "$OUT/cobol.log" 2>&1
@@ -81,7 +82,7 @@ check java ACCTDATA.txt "$OUT/java/ACCTDATA.txt"
 check java SYSTRAN.txt  "$OUT/java/SYSTRAN.txt"
 
 if [ "$FAILED" -ne 0 ]; then
-  echo "RESULT: outputs differ from the baseline (details above; logs in $OUT)"
+  echo "RESULT: outputs differ from the baseline (details above; logs in $(rel "$OUT"))"
   exit 1
 fi
-echo "RESULT: COBOL and Java both match $GOLDEN ($(wc -l < "$OUT/normalized/expected-SYSTRAN.txt" | tr -d ' ') interest transactions)"
+echo "RESULT: COBOL and Java both match $(rel "$GOLDEN") ($(wc -l < "$OUT/normalized/expected-SYSTRAN.txt" | tr -d ' ') interest transactions)"
