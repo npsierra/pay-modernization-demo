@@ -72,11 +72,22 @@ CBTRN02C return code: 4
 
 `java/` contains a Java 17 port of CBTRN02C. It keeps the original business rules exactly, including the over-limit formula described below, and produces the same output files as the COBOL run.
 
+Ubuntu:
+
 ```bash
-sudo apt-get install -y openjdk-17-jdk maven   # Ubuntu
-brew install openjdk@17 maven                  # macOS
-# macOS: Homebrew leaves Java 17 off the PATH; add it once, then open a new terminal
-printf '%s\n' 'export PATH=/opt/homebrew/opt/openjdk@17/bin:$PATH' 'export JAVA_HOME=/opt/homebrew/opt/openjdk@17' >> ~/.zshrc
+sudo apt-get install -y openjdk-17-jdk maven
+```
+
+macOS (Homebrew leaves Java 17 off the PATH; the second line adds it once, for Apple Silicon and Intel Macs alike; then open a new terminal):
+
+```bash
+brew install openjdk@17 maven
+printf '%s\n' "export PATH=$(brew --prefix openjdk@17)/bin:\$PATH" "export JAVA_HOME=$(brew --prefix openjdk@17)" >> ~/.zshrc
+```
+
+Build and run:
+
+```bash
 cd java && mvn package                         # builds java/target/cbtrn02c.jar and runs the unit tests
 java -jar target/cbtrn02c.jar --input-dir ../app/data/ASCII --output-dir out
 ```
