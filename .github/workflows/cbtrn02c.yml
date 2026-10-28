@@ -54,6 +54,16 @@ jobs:
       - name: CBACT04C random batches, COBOL vs Java
         run: tests/fuzz-cbtrn02c.py 1 200 cbact04c
 
+      - name: CBACT01C (account extract), COBOL and Java vs baseline
+        run: |
+          tests/compare-cbact01c.sh
+          tests/compare-cbact01c.sh tests/data/cbact01c-edge tests/golden/cbact01c-edge
+          tests/compare-cbact01c.sh tests/data/cbact01c-empty tests/golden/cbact01c-empty
+          tests/compare-cbact01c.sh tests/data/cbact01c-abend tests/golden/cbact01c-abend 16
+
+      - name: CBACT01C random account files, COBOL vs Java
+        run: tests/fuzz-cbtrn02c.py 1 200 cbact01c
+
       - name: Keep outputs for inspection
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -62,5 +72,6 @@ jobs:
           path: |
             build/cbtrn02c-compare/
             build/cbact04c-compare/
+            build/cbact01c-compare/
             build/cbtrn02c-fuzz/
           if-no-files-found: ignore

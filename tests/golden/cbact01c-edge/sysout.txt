@@ -1,0 +1,212 @@
+START OF EXECUTION OF PROGRAM CBACT01C
+ACCT-ID                 :00000000001
+ACCT-ACTIVE-STATUS      :Y
+ACCT-CURR-BAL           :+0000000194.00
+ACCT-CREDIT-LIMIT       :+0000002020.00
+ACCT-CASH-CREDIT-LIMIT  :+0000001020.00
+ACCT-OPEN-DATE          :2014-11-20
+ACCT-EXPIRAION-DATE     :2025-05-20
+ACCT-REISSUE-DATE       :2025-05-20
+ACCT-CURR-CYC-CREDIT    :+0000000000.00
+ACCT-CURR-CYC-DEBIT     :-0000000100.00
+ACCT-GROUP-ID           :          
+-------------------------------------------------
+VBRC-REC1:00000000001Y
+VBRC-REC2:0000000000100000001940{00000020200{2025
+00000000001Y00000001940{00000020200{00000010200{2014-11-202025-05-202025-05-2000000000000{00000001000}A000000000                                                                                                                                                                                            
+ACCT-ID                 :00000000002
+ACCT-ACTIVE-STATUS      :Y
+ACCT-CURR-BAL           :+0000000194.00
+ACCT-CREDIT-LIMIT       :+0000002020.00
+ACCT-CASH-CREDIT-LIMIT  :+0000001020.00
+ACCT-OPEN-DATE          :2014-11-20
+ACCT-EXPIRAION-DATE     :2025-05-20
+ACCT-REISSUE-DATE       :2025-05-20
+ACCT-CURR-CYC-CREDIT    :+0000000000.00
+ACCT-CURR-CYC-DEBIT     :+0000000050.01
+ACCT-GROUP-ID           :          
+-------------------------------------------------
+VBRC-REC1:00000000002Y
+VBRC-REC2:0000000000200000001940{00000020200{2025
+00000000002Y00000001940{00000020200{00000010200{2014-11-202025-05-202025-05-2000000000000{00000000500AA000000000                                                                                                                                                                                            
+ACCT-ID                 :00000000003
+ACCT-ACTIVE-STATUS      :Y
+ACCT-CURR-BAL           :+0000000194.00
+ACCT-CREDIT-LIMIT       :+0000002020.00
+ACCT-CASH-CREDIT-LIMIT  :+0000001020.00
+ACCT-OPEN-DATE          :2014-11-20
+ACCT-EXPIRAION-DATE     :2025-05-20
+ACCT-REISSUE-DATE       :2025-05-20
+ACCT-CURR-CYC-CREDIT    :+0000000000.00
+ACCT-CURR-CYC-DEBIT     :+0000000000.00
+ACCT-GROUP-ID           :          
+-------------------------------------------------
+VBRC-REC1:00000000003Y
+VBRC-REC2:0000000000300000001940{00000020200{2025
+00000000003Y00000001940{00000020200{00000010200{2014-11-202025-05-202025-05-2000000000000{00000000000}A000000000                                                                                                                                                                                            
+ACCT-ID                 :00000000004
+ACCT-ACTIVE-STATUS      :Y
+ACCT-CURR-BAL           :+0000000194.00
+ACCT-CREDIT-LIMIT       :+0000002020.00
+ACCT-CASH-CREDIT-LIMIT  :+0000001020.00
+ACCT-OPEN-DATE          :2014-11-20
+ACCT-EXPIRAION-DATE     :2025-05-20
+ACCT-REISSUE-DATE       :2025-05-20
+ACCT-CURR-CYC-CREDIT    :+0000000000.00
+ACCT-CURR-CYC-DEBIT     :-0000012345.69
+ACCT-GROUP-ID           :          
+-------------------------------------------------
+VBRC-REC1:00000000004Y
+VBRC-REC2:0000000000400000001940{00000020200{2025
+00000000004Y00000001940{00000020200{00000010200{2014-11-202025-05-202025-05-2000000000000{00000123456RA000000000                                                                                                                                                                                            
+ACCT-ID                 :00000000005
+ACCT-ACTIVE-STATUS      :Y
+ACCT-CURR-BAL           :+0000000194.00
+ACCT-CREDIT-LIMIT       :+0000002020.00
+ACCT-CASH-CREDIT-LIMIT  :+0000001020.00
+ACCT-OPEN-DATE          :2014-11-20
+ACCT-EXPIRAION-DATE     :2025-05-20
+ACCT-REISSUE-DATE       :2025-05-20
+ACCT-CURR-CYC-CREDIT    :+0000000000.00
+ACCT-CURR-CYC-DEBIT     :+0000000000.00
+ACCT-GROUP-ID           :          
+-------------------------------------------------
+VBRC-REC1:00000000005Y
+VBRC-REC2:0000000000500000001940{00000020200{2025
+00000000005Y00000001940{00000020200{00000010200{2014-11-202025-05-202025-05-2000000000000{00000000000{A000000000                                                                                                                                                                                            
+ACCT-ID                 :00000000006
+ACCT-ACTIVE-STATUS      :Y
+ACCT-CURR-BAL           :+0000000123.45
+ACCT-CREDIT-LIMIT       :+0000000000.00
+ACCT-CASH-CREDIT-LIMIT  :+0000000000.00
+ACCT-OPEN-DATE          :2014-11-20
+ACCT-EXPIRAION-DATE     :2025-05-20
+ACCT-REISSUE-DATE       :2025-05-20
+ACCT-CURR-CYC-CREDIT    :+0000000000.05
+ACCT-CURR-CYC-DEBIT     :+0000000000.00
+ACCT-GROUP-ID           :          
+-------------------------------------------------
+VBRC-REC1:00000000006Y
+VBRC-REC2:0000000000600000001234E00000000000}2025
+00000000006Y00000001234E00000000000}00000000000{2014-11-202025-05-202025-05-2000000000000E00000000000{A000000000                                                                                                                                                                                            
+ACCT-ID                 :00000000007
+ACCT-ACTIVE-STATUS      :Y
+ACCT-CURR-BAL           :+9999999999.99
+ACCT-CREDIT-LIMIT       :-9999999999.99
+ACCT-CASH-CREDIT-LIMIT  :-0000000000.11
+ACCT-OPEN-DATE          :2014-11-20
+ACCT-EXPIRAION-DATE     :2025-05-20
+ACCT-REISSUE-DATE       :2025-05-20
+ACCT-CURR-CYC-CREDIT    :-9999999999.99
+ACCT-CURR-CYC-DEBIT     :+9999999999.99
+ACCT-GROUP-ID           :          
+-------------------------------------------------
+VBRC-REC1:00000000007Y
+VBRC-REC2:0000000000799999999999I99999999999R2025
+00000000007Y99999999999I99999999999R00000000001J2014-11-202025-05-202025-05-2099999999999R99999999999IA000000000                                                                                                                                                                                            
+ACCT-ID                 :00000000008
+ACCT-ACTIVE-STATUS      :Y
+ACCT-CURR-BAL           :+0000000194.00
+ACCT-CREDIT-LIMIT       :+0000002020.00
+ACCT-CASH-CREDIT-LIMIT  :+0000001020.00
+ACCT-OPEN-DATE          :2014-11-20
+ACCT-EXPIRAION-DATE     :2025-05-20
+ACCT-REISSUE-DATE       :20250520  
+ACCT-CURR-CYC-CREDIT    :+0000000000.00
+ACCT-CURR-CYC-DEBIT     :+0000000000.00
+ACCT-GROUP-ID           :          
+-------------------------------------------------
+VBRC-REC1:00000000008Y
+VBRC-REC2:0000000000800000001940{00000020200{2025
+00000000008Y00000001940{00000020200{00000010200{2014-11-202025-05-2020250520  00000000000{00000000000{A000000000                                                                                                                                                                                            
+ACCT-ID                 :00000000009
+ACCT-ACTIVE-STATUS      :Y
+ACCT-CURR-BAL           :+0000000194.00
+ACCT-CREDIT-LIMIT       :+0000002020.00
+ACCT-CASH-CREDIT-LIMIT  :+0000001020.00
+ACCT-OPEN-DATE          :          
+ACCT-EXPIRAION-DATE     :          
+ACCT-REISSUE-DATE       :          
+ACCT-CURR-CYC-CREDIT    :+0000000000.00
+ACCT-CURR-CYC-DEBIT     :+0000000000.00
+ACCT-GROUP-ID           :          
+-------------------------------------------------
+VBRC-REC1:00000000009Y
+VBRC-REC2:0000000000900000001940{00000020200{    
+00000000009Y00000001940{00000020200{00000010200{                              00000000000{00000000000{A000000000                                                                                                                                                                                            
+ACCT-ID                 :00000000010
+ACCT-ACTIVE-STATUS      :Y
+ACCT-CURR-BAL           :+0000000194.00
+ACCT-CREDIT-LIMIT       :+0000002020.00
+ACCT-CASH-CREDIT-LIMIT  :+0000001020.00
+ACCT-OPEN-DATE          :2014-11-20
+ACCT-EXPIRAION-DATE     :2025-05-20
+ACCT-REISSUE-DATE       :2025/05/20
+ACCT-CURR-CYC-CREDIT    :+0000000000.00
+ACCT-CURR-CYC-DEBIT     :+0000000000.00
+ACCT-GROUP-ID           :          
+-------------------------------------------------
+VBRC-REC1:00000000010Y
+VBRC-REC2:0000000001000000001940{00000020200{2025
+00000000010Y00000001940{00000020200{00000010200{2014-11-202025-05-202025/05/2000000000000{00000000000{A000000000                                                                                                                                                                                            
+ACCT-ID                 :00000000011
+ACCT-ACTIVE-STATUS      :N
+ACCT-CURR-BAL           :+0000000194.00
+ACCT-CREDIT-LIMIT       :+0000002020.00
+ACCT-CASH-CREDIT-LIMIT  :+0000001020.00
+ACCT-OPEN-DATE          :2014-11-20
+ACCT-EXPIRAION-DATE     :2025-05-20
+ACCT-REISSUE-DATE       :2025-05-20
+ACCT-CURR-CYC-CREDIT    :+0000000000.00
+ACCT-CURR-CYC-DEBIT     :+0000000000.00
+ACCT-GROUP-ID           :GOLD      
+-------------------------------------------------
+VBRC-REC1:00000000011N
+VBRC-REC2:0000000001100000001940{00000020200{2025
+00000000011N00000001940{00000020200{00000010200{2014-11-202025-05-202025-05-2000000000000{00000000000{12345-6789GOLD      Filler text is displayed with the record but never written                                                                                                                        
+ACCT-ID                 :00000000012
+ACCT-ACTIVE-STATUS      :Y
+ACCT-CURR-BAL           :+0000000194.00
+ACCT-CREDIT-LIMIT       :+0000002020.00
+ACCT-CASH-CREDIT-LIMIT  :+0000001020.00
+ACCT-OPEN-DATE          :2014-11-20
+ACCT-EXPIRAION-DATE     :2025-05-20
+ACCT-REISSUE-DATE       :2025-05-20
+ACCT-CURR-CYC-CREDIT    :+0000000000.00
+ACCT-CURR-CYC-DEBIT     :+0000000000.00
+ACCT-GROUP-ID           :SILVER    
+-------------------------------------------------
+VBRC-REC1:00000000012Y
+VBRC-REC2:0000000001200000001940{00000020200{2025
+00000000012Y00000001940{00000020200{00000010200{2014-11-202025-05-202025-05-2000000000000{00000000000{A000000000SILVER                                                                                                                                                                                      
+ACCT-ID                 :00000000013
+ACCT-ACTIVE-STATUS      : 
+ACCT-CURR-BAL           :+0000000194.00
+ACCT-CREDIT-LIMIT       :+0000002020.00
+ACCT-CASH-CREDIT-LIMIT  :+0000001020.00
+ACCT-OPEN-DATE          :2014-11-20
+ACCT-EXPIRAION-DATE     :2025-05-20
+ACCT-REISSUE-DATE       :1999-12-31
+ACCT-CURR-CYC-CREDIT    :+0000000000.00
+ACCT-CURR-CYC-DEBIT     :+0000000000.00
+ACCT-GROUP-ID           :          
+-------------------------------------------------
+VBRC-REC1:00000000013 
+VBRC-REC2:0000000001300000001940{00000020200{1999
+00000000013 00000001940{00000020200{00000010200{2014-11-202025-05-201999-12-3100000000000{00000000000{A000000000                                                                                                                                                                                            
+ACCT-ID                 :99999999999
+ACCT-ACTIVE-STATUS      :Y
+ACCT-CURR-BAL           :-0000000000.10
+ACCT-CREDIT-LIMIT       :+0000002020.00
+ACCT-CASH-CREDIT-LIMIT  :+0000001020.00
+ACCT-OPEN-DATE          :2014-11-20
+ACCT-EXPIRAION-DATE     :2025-05-20
+ACCT-REISSUE-DATE       :2025-05-20
+ACCT-CURR-CYC-CREDIT    :+0000000000.00
+ACCT-CURR-CYC-DEBIT     :+0000000000.00
+ACCT-GROUP-ID           :          
+-------------------------------------------------
+VBRC-REC1:99999999999Y
+VBRC-REC2:9999999999900000000001}00000020200{2025
+99999999999Y00000000001}00000020200{00000010200{2014-11-202025-05-202025-05-2000000000000{00000000000{A000000000                                                                                                                                                                                            
+END OF EXECUTION OF PROGRAM CBACT01C
