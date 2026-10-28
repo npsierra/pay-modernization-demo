@@ -1,0 +1,6 @@
+010001Regular Sales Draft, description cut at 29 chars  0000
+010002Regular Cash Advance                              0000
+020001Cash payment                                      0000
+030001Credit to Account                                 0000
+040001Zero dollar authorization                         0000
+040002Online purchase authorization

@@ -22,6 +22,8 @@ final class PostingFiles {
     static final String ACCOUNTS = "acctdata.txt";
     static final String CATEGORY_BALANCES = "tcatbal.txt";
     static final String DISCLOSURE_GROUPS = "discgrp.txt";
+    static final String TRANSACTION_TYPES = "trantype.txt";
+    static final String TRANSACTION_CATEGORIES = "trancatg.txt";
 
     static final String TRANSACTIONS_OUT = "TRANSACT.txt";
     static final String ACCOUNTS_OUT = "ACCTDATA.txt";
@@ -58,6 +60,17 @@ final class PostingFiles {
                 DisclosureGroup::parse, DisclosureGroup::key);
     }
 
+    /** TRANTYPE: 60-byte records (copybook CVTRA03Y), key = type code (2). */
+    static KeyedFile<String> readTransactionTypes(Path inputDir) {
+        return load(inputDir.resolve(TRANSACTION_TYPES), "TRANSACTION TYPE FILE", 60, r -> r, r -> r.substring(0, 2));
+    }
+
+    /** TRANCATG: 60-byte records (copybook CVTRA04Y), key = type code + category code (6). */
+    static KeyedFile<String> readTransactionCategories(Path inputDir) {
+        return load(inputDir.resolve(TRANSACTION_CATEGORIES), "TRANSACTION CATG FILE", 60, r -> r,
+                r -> r.substring(0, 6));
+    }
+
     static void writeOutputs(DailyTransactionPosting posting, Path outputDir) {
         write(outputDir.resolve(TRANSACTIONS_OUT), posting.transactionRecords());
         write(outputDir.resolve(ACCOUNTS_OUT), map(posting.accounts().records(), Account::toRecord));
@@ -78,7 +91,7 @@ final class PostingFiles {
         return keyed;
     }
 
-    private static List<String> lines(Path file) {
+    static List<String> lines(Path file) {
         try {
             List<String> lines = new ArrayList<>();
             for (String line : Files.readAllLines(file, StandardCharsets.US_ASCII)) {

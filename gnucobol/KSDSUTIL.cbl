@@ -5,10 +5,12 @@
       *               indexed file, or unloads an indexed file to text.
       * Usage       : KSDSUTIL LOAD|UNLOAD XREF|ACCT|TCATBAL
       *               KSDSUTIL UNLOAD TRAN
-      *               KSDSUTIL LOAD XREFAIX|DISCGRP
+      *               KSDSUTIL LOAD XREFAIX|DISCGRP|TRANTYPE|TRANCATG
       *               XREFAIX = card cross-reference with the account
       *               ID alternate index (CARDXREF.VSAM.AIX, used by
-      *               CBACT04C); DISCGRP = disclosure groups.
+      *               CBACT04C); DISCGRP = disclosure groups;
+      *               TRANTYPE / TRANCATG = transaction type and
+      *               category descriptions (used by CBTRN03C).
       * Files       : DD_TEXTFILE = text side, DD_KSDSFILE = indexed.
       *               Short text lines are space padded to the record
       *               length, so trimmed lines load as full records.
@@ -55,6 +57,18 @@
                   RECORD KEY   IS DISCGRP-KEY
                   FILE STATUS  IS WS-KSDS-STATUS.
 
+           SELECT TRANTYPE-FILE ASSIGN TO KSDSFILE
+                  ORGANIZATION IS INDEXED
+                  ACCESS MODE  IS SEQUENTIAL
+                  RECORD KEY   IS TRANTYPE-KEY
+                  FILE STATUS  IS WS-KSDS-STATUS.
+
+           SELECT TRANCATG-FILE ASSIGN TO KSDSFILE
+                  ORGANIZATION IS INDEXED
+                  ACCESS MODE  IS SEQUENTIAL
+                  RECORD KEY   IS TRANCATG-KEY
+                  FILE STATUS  IS WS-KSDS-STATUS.
+
            SELECT TRAN-FILE ASSIGN TO KSDSFILE
                   ORGANIZATION IS INDEXED
                   ACCESS MODE  IS SEQUENTIAL
@@ -93,6 +107,16 @@
            05 DISCGRP-KEY              PIC X(16).
            05 FILLER                   PIC X(34).
 
+       FD  TRANTYPE-FILE.
+       01  TRANTYPE-REC.
+           05 TRANTYPE-KEY             PIC X(02).
+           05 FILLER                   PIC X(58).
+
+       FD  TRANCATG-FILE.
+       01  TRANCATG-REC.
+           05 TRANCATG-KEY             PIC X(06).
+           05 FILLER                   PIC X(54).
+
        FD  TRAN-FILE.
        01  TRAN-REC.
            05 TRAN-KEY                 PIC X(16).
@@ -115,6 +139,8 @@
              WHEN 'LOAD'   ALSO 'TCATBAL' PERFORM 1200-LOAD-TCATBAL
              WHEN 'LOAD'   ALSO 'XREFAIX' PERFORM 1300-LOAD-XREFAIX
              WHEN 'LOAD'   ALSO 'DISCGRP' PERFORM 1400-LOAD-DISCGRP
+             WHEN 'LOAD'   ALSO 'TRANTYPE' PERFORM 1500-LOAD-TRANTYPE
+             WHEN 'LOAD'   ALSO 'TRANCATG' PERFORM 1600-LOAD-TRANCATG
              WHEN 'UNLOAD' ALSO 'XREF'    PERFORM 2000-UNLOAD-XREF
              WHEN 'UNLOAD' ALSO 'ACCT'    PERFORM 2100-UNLOAD-ACCT
              WHEN 'UNLOAD' ALSO 'TCATBAL' PERFORM 2200-UNLOAD-TCATBAL
@@ -188,6 +214,30 @@
                PERFORM 8100-READ-TEXT
            END-PERFORM
            CLOSE TEXT-FILE DISCGRP-FILE
+           PERFORM 8400-CHECK-CLOSE.
+
+       1500-LOAD-TRANTYPE.
+           OPEN INPUT TEXT-FILE OUTPUT TRANTYPE-FILE
+           PERFORM 8000-CHECK-OPEN
+           PERFORM 8100-READ-TEXT
+           PERFORM UNTIL WS-EOF = 'Y'
+               WRITE TRANTYPE-REC FROM TEXT-REC
+               PERFORM 8200-CHECK-KSDS-IO
+               PERFORM 8100-READ-TEXT
+           END-PERFORM
+           CLOSE TEXT-FILE TRANTYPE-FILE
+           PERFORM 8400-CHECK-CLOSE.
+
+       1600-LOAD-TRANCATG.
+           OPEN INPUT TEXT-FILE OUTPUT TRANCATG-FILE
+           PERFORM 8000-CHECK-OPEN
+           PERFORM 8100-READ-TEXT
+           PERFORM UNTIL WS-EOF = 'Y'
+               WRITE TRANCATG-REC FROM TEXT-REC
+               PERFORM 8200-CHECK-KSDS-IO
+               PERFORM 8100-READ-TEXT
+           END-PERFORM
+           CLOSE TEXT-FILE TRANCATG-FILE
            PERFORM 8400-CHECK-CLOSE.
 
        2000-UNLOAD-XREF.

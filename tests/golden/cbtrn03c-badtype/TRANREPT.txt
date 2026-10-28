@@ -1,0 +1,8 @@
+DALYREPT                              Daily Transaction Report                 Date Range: 2026-03-01 to 2026-03-31                  
+                                                                                                                                     
+Transaction ID   Account ID  Transaction Type   Tran Category                      Tran Source            Amount                     
+-------------------------------------------------------------------------------------------------------------------------------------
+0000000000000001 00000000901 01-Purchase with a 0001-Regular Sales Draft, descript POS TERM                 1.00                     
+0000000000000002 00000000901 01-Purchase with a 0001-Regular Sales Draft, descript POS TERM                 2.00                     
+Account Total....................................................................................+          3.00                     
+-------------------------------------------------------------------------------------------------------------------------------------
