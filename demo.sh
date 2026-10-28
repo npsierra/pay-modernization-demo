@@ -5,6 +5,9 @@
 # Press Enter between steps; set DEMO_NO_PAUSE=1 to run straight through.
 set -euo pipefail
 
+# The demo always uses the bundled sample data and sets each run's options itself.
+unset INPUT_DIR WORK_DIR SIGN_ENCODING
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUT="$ROOT/build/demo"
 JAR="$ROOT/java/target/cbtrn02c.jar"
@@ -59,6 +62,7 @@ java -jar "$JAR" --input-dir "$ROOT/app/data/ASCII" --output-dir "$OUT/java" > "
 JAVA_RC=$?
 set -e
 echo " Return code: $JAVA_RC"
+if [ "$JAVA_RC" -ne 4 ]; then echo "Java run failed (expected rc 4), see $OUT/java.sysout.txt"; exit 1; fi
 grep -E 'TRANSACTIONS (PROCESSED|REJECTED)' "$OUT/java.sysout.txt" | tr -s ' '
 
 step "4. Prove it: COBOL and Java vs the saved COBOL baseline, file by file"
