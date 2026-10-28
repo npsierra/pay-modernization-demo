@@ -73,16 +73,6 @@ public final class Cbact01cMain {
             outputs[0].write(extract.outFile());
             outputs[1].write(extract.arryFile());
             outputs[2].write(extract.vbrcFile());
-            boolean closed = true;
-            for (int i = 0; i < outputs.length; i++) {
-                closed &= closeQuietly(outputs[i]);
-                outputs[i] = null;
-            }
-            if (!closed) {
-                System.out.println("ACCOUNT FILE WRITE STATUS IS:");
-                deleteOutputs(outputDir);
-                return abend();
-            }
             return 0;
         } catch (IOException e) {
             // 1350-1575 write failures: the COBOL displays the status and abends.
@@ -93,37 +83,16 @@ public final class Cbact01cMain {
             System.out.println(e.getMessage());
             return abend();
         } finally {
-            // Any stream still open here means the run abended: close it and remove the
-            // extracts so a failed job never leaves complete-looking output behind.
-            boolean abended = false;
             for (OutputStream output : outputs) {
-                if (output != null) {
-                    abended = true;
-                    closeQuietly(output);
-                }
-            }
-            if (abended) {
-                deleteOutputs(outputDir);
+                closeQuietly(output);
             }
         }
     }
 
-    private static boolean closeQuietly(OutputStream output) {
+    private static void closeQuietly(OutputStream output) {
         if (output != null) {
             try {
                 output.close();
-            } catch (IOException e) {
-                System.err.println("CBACT01C: " + e.getMessage());
-                return false;
-            }
-        }
-        return true;
-    }
-
-    private static void deleteOutputs(Path outputDir) {
-        for (String name : OUTPUTS) {
-            try {
-                Files.deleteIfExists(outputDir.resolve(name + ".dat"));
             } catch (IOException e) {
                 System.err.println("CBACT01C: " + e.getMessage());
             }
