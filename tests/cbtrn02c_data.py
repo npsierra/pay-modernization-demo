@@ -5,6 +5,7 @@ in the same ASCII layout as app/data/ASCII.
   cbtrn02c_data.py edge OUT_DIR           hand-made cases for every reject reason and boundary
   cbtrn02c_data.py random SEED OUT_DIR    a random batch (same seed = same files)
 """
+import datetime
 import random
 import sys
 from decimal import Decimal
@@ -176,7 +177,8 @@ def random_batch(seed):
             if rng.random() < 0.1:
                 tran_date = expiration
             elif rng.random() < 0.1:
-                tran_date = expiration[:8] + f"{min(int(expiration[8:]) + 1, 29):02d}"
+                tran_date = (datetime.date.fromisoformat(expiration)
+                             + datetime.timedelta(days=1)).isoformat()
         trans.append(daily(tran_id, type_cd, rng.randint(1, 5), amount, card, tran_date, "Random"))
     return trans, xrefs, accounts, list(tcatbals.values())
 
