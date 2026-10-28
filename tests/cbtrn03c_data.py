@@ -110,6 +110,10 @@ def edge(data_dir):
                 tran(3, "01", 1, "3.00", c[0], "2026-03-02"), tran(4, "01", 1, "4.00", c[3], "2026-04-02"),
                 tran(5, "01", 1, "5.00", c[3], "2026-03-02")]
     write(out / "cbtrn03c-stop", unsorted, xrefs, parm, sorted_input=True)
+    # A blank first card equals the initial current card, so no lookup is done and the
+    # account ID prints as the initial zeros.
+    write(out / "cbtrn03c-blankcard", [tran(1, "01", 1, "5.00", " " * 16, "2026-03-02"),
+                                       tran(2, "01", 1, "6.00", c[0], "2026-03-02")], xrefs, parm)
     # Lookup failures abend (U0999, return code 16) after writing part of the report.
     good = [tran(1, "01", 1, "1.00", c[0], "2026-03-02"), tran(2, "01", 1, "2.00", c[0], "2026-03-02")]
     write(out / "cbtrn03c-badcard", good + [tran(3, "01", 1, "3.00", card_number(999), "2026-03-02")],

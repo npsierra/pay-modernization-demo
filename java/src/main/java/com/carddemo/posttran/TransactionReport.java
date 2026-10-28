@@ -31,7 +31,8 @@ final class TransactionReport {
     private BigDecimal accountTotal = BigDecimal.ZERO;
     private BigDecimal grandTotal = BigDecimal.ZERO;
     private String currentCard = BLANK_CARD;
-    private String accountId;
+    /** XREF-ACCT-ID before any lookup (a blank first card skips it): zeros. */
+    private String accountId = "0".repeat(11);
     private String typeDescription;
     private String categoryDescription;
 

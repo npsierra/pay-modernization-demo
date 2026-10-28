@@ -77,7 +77,7 @@ jobs:
       - name: CBTRN03C (transaction report), COBOL and Java vs baseline
         run: |
           tests/compare-cbtrn03c.sh
-          for case in edge empty blankparm stop; do
+          for case in edge empty blankparm blankcard stop; do
             tests/compare-cbtrn03c.sh tests/data/cbtrn03c-$case tests/golden/cbtrn03c-$case
           done
           for case in badcard badtype badcatg missing noparm; do
