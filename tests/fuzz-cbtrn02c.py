@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """Differential test: builds random CBTRN02C batches (tests/cbtrn02c_data.py), runs the
 original COBOL (run-cbtrn02c.sh) and the Java port on each, and fails on the first output
-that differs. Usage: fuzz-cbtrn02c.py [FIRST_SEED] [COUNT] [cbtrn02c|cbact04c].
+that differs. Usage: fuzz-cbtrn02c.py [FIRST_SEED] [COUNT] [cbtrn02c|cbact04c|cbact01c].
 cbact04c runs the interest calculation (run-cbact04c.sh vs IntcalcMain) on random
-category balances instead. Needs java/target/cbtrn02c.jar.
+category balances instead; cbact01c the account extract (run-cbact01c.sh vs Cbact01cMain)
+on random account files, comparing its binary outputs byte for byte.
+Needs java/target/cbtrn02c.jar.
 """
 import os
 import shutil
@@ -86,6 +88,40 @@ def run_intcalc_seed(seed):
     return problems, written
 
 
+EXTRACT_FILES = ["OUTFILE.dat", "ARRYFILE.dat", "VBRCFILE.dat"]
+
+
+def run_extract_seed(seed):
+    case = OUT / f"cbact01c-seed-{seed}"
+    shutil.rmtree(case, ignore_errors=True)
+    data, cobol, java = case / "input", case / "cobol", case / "java"
+    accounts = cbtrn02c_data.extract_batch(seed)
+    cbtrn02c_data.write_extract(data, accounts)
+    cobol_rc = subprocess.run([str(ROOT / "run-cbact01c.sh")], env={**os.environ, "INPUT_DIR": str(data),
+                              "WORK_DIR": str(cobol)}, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL).returncode
+    java.mkdir(parents=True)
+    with open(java / "sysout.txt", "w") as sysout:
+        java_rc = subprocess.run(["java", "-cp", str(JAR), "com.carddemo.posttran.Cbact01cMain", "--input-dir",
+                                  str(data), "--output-dir", str(java)], stdout=sysout,
+                                 stderr=subprocess.DEVNULL).returncode
+    problems = []
+    if cobol_rc != java_rc:
+        problems.append(f"return code COBOL {cobol_rc} vs Java {java_rc}")
+    if cobol_rc != 0:
+        problems.append(f"COBOL failed with return code {cobol_rc}")
+    if not problems:
+        if normalize(cobol / "sysout.txt", False) != normalize(java / "sysout.txt", False):
+            problems.append(f"sysout differs ({cobol / 'sysout.txt'} vs {java / 'sysout.txt'})")
+        for name in EXTRACT_FILES:
+            if (cobol / "data" / name).read_bytes() != (java / name).read_bytes():
+                problems.append(f"{name} differs ({cobol / 'data' / name} vs {java / name})")
+    if problems:
+        return problems, 0
+    shutil.rmtree(case)
+    return problems, len(accounts)
+
+
 def run_seed(seed):
     case = OUT / f"seed-{seed}"
     shutil.rmtree(case, ignore_errors=True)
@@ -119,10 +155,11 @@ def main():
     first = int(sys.argv[1]) if len(sys.argv) > 1 else 1
     count = int(sys.argv[2]) if len(sys.argv) > 2 else 100
     job = sys.argv[3] if len(sys.argv) > 3 else "cbtrn02c"
-    if job not in ("cbtrn02c", "cbact04c"):
+    jobs = {"cbtrn02c": (run_seed, "rejects"), "cbact04c": (run_intcalc_seed, "interest transactions"),
+            "cbact01c": (run_extract_seed, "accounts extracted")}
+    if job not in jobs:
         sys.exit(__doc__)
-    run = run_intcalc_seed if job == "cbact04c" else run_seed
-    noun = "interest transactions" if job == "cbact04c" else "rejects"
+    run, noun = jobs[job]
     if not JAR.exists():
         sys.exit(f"{JAR} not found: run 'mvn package' in java/ first")
     rejects = 0
