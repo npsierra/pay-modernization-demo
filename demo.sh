@@ -18,17 +18,17 @@ mkdir -p "$OUT"
 
 # Colour only when printing to a terminal (never in CI or when piped to a file).
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ]; then
-  BOLD=$'\e[1m' DIM=$'\e[2m' GREEN=$'\e[32m' RED=$'\e[31m' YELLOW=$'\e[33m' CYAN=$'\e[36m' RESET=$'\e[0m'
+  BOLD=$'\e[1m' GREEN=$'\e[32m' RED=$'\e[31m' YELLOW=$'\e[33m' CYAN=$'\e[36m' RESET=$'\e[0m'
 else
-  BOLD= DIM= GREEN= RED= YELLOW= CYAN= RESET=
+  BOLD= GREEN= RED= YELLOW= CYAN= RESET=
 fi
 
 step() { # step <title> <what to look at>
   if [ -z "${DEMO_NO_PAUSE:-}" ] && [ -t 0 ]; then
-    printf '\n%s[Enter] %s%s ' "$DIM" "$1" "$RESET"; read -r _
+    printf '\n[Enter] %s ' "$1"; read -r _
   fi
   printf '\n%s==================================================================\n %s\n==================================================================%s\n' "$CYAN$BOLD" "$1" "$RESET"
-  printf '%s %s%s\n\n' "$DIM" "$2" "$RESET"
+  printf ' %s\n\n' "$2"
 }
 
 paint() { # colour the comparison script's verdicts
@@ -48,10 +48,15 @@ signed() { # 11-char zoned amount, sign in the last character (mainframe overpun
   }'
 }
 
-counts() { # counts <work dir>
-  grep -E 'TRANSACTIONS (PROCESSED|REJECTED)' "$1/sysout.txt" | tr -s ' '
+counts() { # counts <sysout file> <rejects file>
+  grep -E 'TRANSACTIONS (PROCESSED|REJECTED)' "$1" | tr -s ' '
   echo " Rejects by reason:"
-  cut -c351-430 "$1/rejects.txt" | sed 's/ *$//' | sort | uniq -c | sed 's/^/  /'
+  cut -c351-430 "$2" | sed 's/ *$//' | sort | uniq -c | sed 's/^/  /'
+}
+
+explain_sign() { # explain_sign <11-char amount> -> "} = 0 with a minus sign folded in"
+  awk '{ c = substr($0, 11, 1); i = index("{ABCDEFGHI}JKLMNOPQR", c) - 1
+         printf "%s = %d, %s\n", c, i % 10, (i >= 10) ? "with a minus sign folded in" : "positive" }'
 }
 
 run() { # run <work dir> [VAR=value ...] -- runs CBTRN02C, keeps the log, accepts rc 0 or 4 (some rejected)
@@ -79,27 +84,35 @@ sed -i.orig 's/creditLimit().compareTo(projected) < 0/creditLimit().compareTo(pr
 if cmp -s "$RULE" "$RULE.orig"; then echo "could not apply the step 4 rule change"; exit 1; fi
 (cd "$BROKEN" && mvn -q -B package -DskipTests)
 
-step "1. Original COBOL, unchanged, under GnuCOBOL (cobc -fsign=EBCDIC)" \
-  "The CardDemo program app/cbl/CBTRN02C.cbl, not modified, compiled and run on this machine. Look at: how many of the 300 daily transactions post, how many are rejected, and why."
+step "1. Original COBOL, unchanged, compiled and run here with GnuCOBOL" \
+  "The CardDemo program app/cbl/CBTRN02C.cbl, not modified. Look at: how many of the 300 daily transactions post, how many are rejected, and why."
 run "$OUT/cobol" SIGN_ENCODING=EBCDIC
-counts "$OUT/cobol"
-echo " Sample amounts as stored (last character carries the sign, the mainframe way):"
-cut -c133-143 "$ROOT/app/data/ASCII/dailytran.txt" | grep -m3 -E '[{}A-R]$' | while IFS= read -r a; do
-  printf '  %s  means %s\n' "$a" "$(echo "$a" | signed)"
+counts "$OUT/cobol/sysout.txt" "$OUT/cobol/rejects.txt"
+echo
+echo " Amounts in the input file have a letter or bracket as their last character: the mainframe folds the +/- sign"
+echo " into the last digit. GnuCOBOL is told to read them the mainframe way (-fsign=EBCDIC)."
+printf '  %-13s %-10s %s\n' "In the file" "Means" ""
+for pat in '[}J-R]$' '[{A-I]$'; do
+  a="$(cut -c133-143 "$ROOT/app/data/ASCII/dailytran.txt" | grep -m1 -E "$pat")"
+  printf '  %-13s %-10s (%s)\n' "$a" "$(echo "$a" | signed)" "$(echo "$a" | explain_sign)"
 done
+echo " Read these the wrong way and every amount flips sign: 299 of the 300 transactions are rejected instead of 38."
 
 step "2. Java port on the same input" \
-  "The Java 17 port (java/) reads the same input files. Look at: the same two counts."
+  "The Java 17 port (java/) reads the same input files. Look at: the same counts and the same rejects by reason."
 set +e
 java -jar "$JAR" --input-dir "$ROOT/app/data/ASCII" --output-dir "$OUT/java" > "$OUT/java.sysout.txt" 2>&1
 JAVA_RC=$?
 set -e
 echo " Return code: $JAVA_RC"
 if [ "$JAVA_RC" -ne 4 ]; then echo "Java run failed (expected rc 4), see $OUT/java.sysout.txt"; exit 1; fi
-grep -E 'TRANSACTIONS (PROCESSED|REJECTED)' "$OUT/java.sysout.txt" | tr -s ' '
+counts "$OUT/java.sysout.txt" "$OUT/java/DALYREJS.txt"
 
 step "3. Prove it: COBOL and Java vs the saved COBOL baseline, file by file" \
-  "The automatic check. Every file both runs produce (SYSOUT, posted transactions, accounts, category balances, rejects) is compared with a saved copy of the COBOL output. MATCH = identical."
+  "The automatic check. Every file both runs produce is compared with a saved copy of the COBOL output. MATCH = identical."
+echo " The five files:  sysout = program log   TRANSACT = posted transactions   ACCTDATA = account balances"
+echo "                  TCATBALF = balances per transaction category   DALYREJS = rejected transactions, with the reason"
+echo
 "$ROOT/tests/compare-cbtrn02c.sh" | paint
 
 step "4. Break one business rule in the Java: is the comparison able to catch it?" \
@@ -131,5 +144,8 @@ echo " The transaction the broken Java rejected but the original COBOL posted:"
 done
 rm -rf "$BROKEN"
 echo
-echo " Caught. The throwaway copy is deleted; the real Java was never changed."
-printf '\n%s This same check runs on every pull request, for all three programs ported so far (CBTRN02C, CBACT04C, CBACT01C):\n sample data, hand-made edge cases, and 200 random batches each. COBOL and Java have to agree on every file.%s\n' "$BOLD" "$RESET"
+echo " In words: the account had exactly 400.00 of credit left and a 400.00 purchase came in. The original COBOL"
+echo " posts it; the broken Java rejects it. One character of difference, invisible on the sample data, caught here."
+echo
+echo " The throwaway copy is deleted; the real Java was never changed."
+printf '\n%s This same check runs on every pull request, for all three programs ported so far:\n CBTRN02C (posts transactions), CBACT04C (calculates interest), CBACT01C (extracts accounts).\n Sample data, hand-made edge cases and 200 generated batches each. COBOL and Java have to agree on every file.%s\n' "$BOLD" "$RESET"
