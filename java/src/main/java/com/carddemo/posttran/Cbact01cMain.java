@@ -77,6 +77,7 @@ public final class Cbact01cMain {
         } catch (IOException e) {
             // 1350-1575 write failures: the COBOL displays the status and abends.
             System.out.println("ACCOUNT FILE WRITE STATUS IS:");
+            System.err.println("CBACT01C: " + e);
             return abend();
         } catch (RuntimeException e) {
             System.out.println(e.getMessage());
