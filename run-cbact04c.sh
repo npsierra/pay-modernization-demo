@@ -11,6 +11,8 @@ PARM_DATE="${PARM_DATE:-2022071800}"   # INTCALC.jcl: EXEC PGM=CBACT04C,PARM='20
 BIN="$WORK/bin"
 DD="$WORK/data"
 
+[ "$(cd "$WORK" 2>/dev/null && pwd -P || echo "$WORK")" != "/" ] || { echo "WORK_DIR must not be /" >&2; exit 8; }
+
 command -v cobc >/dev/null || { echo "cobc not found: install GnuCOBOL (Ubuntu: sudo apt-get install -y gnucobol, macOS: brew install gnucobol)" >&2; exit 1; }
 
 rm -rf "$BIN" "$DD"
