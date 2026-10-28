@@ -18,7 +18,7 @@ DD="$WORK/data"
 
 command -v cobc >/dev/null || { echo "cobc not found: install GnuCOBOL (Ubuntu: gnucobol/install-gnucobol.sh, macOS: brew install gnucobol)" >&2; exit 1; }
 
-rm -rf "$BIN" "$DD" "$WORK/input"
+rm -rf "$BIN" "$DD"
 rm -f "$WORK/sysout.txt" "$WORK/TRANREPT.txt"
 mkdir -p "$BIN" "$DD"
 
@@ -26,6 +26,7 @@ if [ -n "${INPUT_DIR:-}" ]; then
   DATA="$INPUT_DIR"
 else
   DATA="$WORK/input"
+  rm -rf "$DATA"
   mkdir -p "$DATA"
   cp "$ROOT/tests/golden/cbtrn02c/TRANSACT.txt" "$DATA/transact.txt"
   cp "$ROOT/app/data/ASCII/cardxref.txt" "$ROOT/app/data/ASCII/trantype.txt" \
