@@ -68,6 +68,33 @@ CBTRN02C return code: 4
 - **38 rejected, all with reason `102 OVERLIMIT TRANSACTION`.** They are all purchases, spread across 17 accounts and totaling $26,846.84. No transaction failed the card lookup (100), the account lookup (101) or the expiration check (103).
 - **Independent check:** a separate Python version of the same rules, run over the same input, produced the same posted/rejected split and the same final account and category balances.
 
+## Java port and the automatic check
+
+`java/` contains a Java 17 port of CBTRN02C. It keeps the original business rules exactly, including the over-limit formula described below, and produces the same output files as the COBOL run.
+
+```bash
+sudo apt-get install -y openjdk-17-jdk maven   # Ubuntu
+brew install openjdk@17 maven                  # macOS
+cd java && mvn package                         # builds java/target/cbtrn02c.jar and runs the unit tests
+java -jar target/cbtrn02c.jar --input-dir ../app/data/ASCII --output-dir out
+```
+
+It reads the ASCII sample files directly (no conversion step) and writes `TRANSACT.txt`, `ACCTDATA.txt`, `TCATBALF.txt` and `DALYREJS.txt`, one record per line. It prints the same SYSOUT messages and uses the same return codes as the COBOL step: 0 all posted, 4 some rejected, 16 abend.
+
+| COBOL paragraph | Java |
+|---|---|
+| `1500-VALIDATE-TRAN` (card, account, limit, expiration checks) | `TransactionValidator` |
+| `2000-POST-TRANSACTION`, `2700-UPDATE-TCATBAL` | `DailyTransactionPosting` |
+| `2800-UPDATE-ACCOUNT-REC` | `Account.post` |
+| Indexed files (VSAM KSDS) | `KeyedFile` (in memory, kept in key order) |
+| Signed amounts (`PIC S9(n)V99` with sign characters) | `ZonedDecimal` |
+
+**Comparing the two:** `tests/compare-cbtrn02c.sh` runs the COBOL program and the Java port on the sample data and checks every output file from both against a saved copy of the COBOL results in `tests/golden/cbtrn02c/` (SYSOUT, transactions, accounts, category balances, rejects). It ignores trailing spaces and the processing timestamp in TRANSACT (columns 305-330), because that is the time of the run. Anything else that differs fails the check, and the script prints the differing lines. The Maven build also runs the same comparison for the Java port alone.
+
+**On every change:** the GitHub Actions workflow `.github/workflows/cbtrn02c.yml` runs the Maven build and `tests/compare-cbtrn02c.sh` on every pull request and every push to `main`.
+
+**If the results are meant to change** (for example, an agreed change to the over-limit rule), update the COBOL and Java code together. Then run `./run-cbtrn02c.sh` and copy the new files from `gnucobol/work/` into `tests/golden/cbtrn02c/`: `sysout.txt`, `rejects.txt` as `DALYREJS.txt`, and `data/<name>.after.txt` as `<name>.txt` for TRANSACT, ACCTDATA and TCATBALF.
+
 ## Things to know
 
 - **How the over-limit check works:** it computes `cycle credit - cycle debit + amount` and compares that with the credit limit. Returns are negative and are added to cycle debit, so subtracting the debit makes each return *increase* the amount compared with the limit. If returns were instead netted against purchases, 23 transactions would be rejected rather than 38. This is the original program's behavior and has not been changed.

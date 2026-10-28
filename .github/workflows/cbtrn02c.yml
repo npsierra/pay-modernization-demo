@@ -1,0 +1,40 @@
+name: CBTRN02C COBOL vs Java
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  compare:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install GnuCOBOL
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnucobol
+          cobc --version | head -1
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: maven
+
+      - name: Build and unit-test the Java port
+        working-directory: java
+        run: mvn -B package
+
+      - name: Compare COBOL and Java outputs with the baseline
+        run: tests/compare-cbtrn02c.sh
+
+      - name: Keep outputs for inspection
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cbtrn02c-outputs
+          path: build/cbtrn02c-compare/
+          if-no-files-found: ignore
