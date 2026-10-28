@@ -5,12 +5,12 @@ This runs the batch program `app/cbl/CBTRN02C.cbl` on Linux with GnuCOBOL. It us
 ## Quick start
 
 ```bash
-sudo apt-get install -y gnucobol   # Ubuntu 22.04: GnuCOBOL 3.1.2
+gnucobol/install-gnucobol.sh       # Ubuntu: builds GnuCOBOL 3.2 (apt only has 3.1.2)
 brew install gnucobol              # macOS: GnuCOBOL 3.2
 ./run-cbtrn02c.sh
 ```
 
-Tested with GnuCOBOL 3.1.2 and 3.2 (the version Homebrew installs); both give identical results. The script compiles everything and rebuilds the input files from `app/data/ASCII`, so each run starts from the same data. It then runs the program and prints a summary. Set `INPUT_DIR` to run it on other input files with the same names. Everything it creates goes in `gnucobol/work/` (or `WORK_DIR`), which git ignores:
+Everything (CI, Devin's VM, macOS) uses GnuCOBOL 3.2, the version Homebrew installs, so every count in this file is what 3.2 prints. The script compiles everything and rebuilds the input files from `app/data/ASCII`, so each run starts from the same data. It then runs the program and prints a summary. Set `INPUT_DIR` to run it on other input files with the same names. Everything it creates goes in `gnucobol/work/` (or `WORK_DIR`), which git ignores:
 
 | File | Contents |
 |---|---|
@@ -43,7 +43,7 @@ The ASCII files were used. The EBCDIC files were not needed.
 - **Sequential input (DALYTRAN):** the program reads fixed 350-byte records with no line endings, so the script removes the line feeds. Every line in `dailytran.txt` is exactly 350 bytes.
 - **Indexed files (VSAM KSDS):** `gnucobol/KSDSUTIL.cbl` loads each text file into a GnuCOBOL indexed file (Berkeley DB). It does the same job as the `IDCAMS REPRO` steps in `XREFFILE.jcl`, `ACCTFILE.jcl` and `TCATBALF.jcl`. It can also unload a file back to text for inspection.
 - **Cleanup:** `tcatbal.txt` has Windows (CRLF) line endings, so the script removes the CR characters. The lines in `cardxref.txt` are 36 bytes instead of 50. The 14 missing bytes are the record's unused filler, and the loader pads them with spaces.
-- **Signed amounts:** amounts are stored with the mainframe sign convention, where the last character of the number carries both the last digit and the sign. `{`/`A`–`I` mean +0..+9 and `}`/`J`–`R` mean -0..-9. The data is not changed. Instead the program is compiled with `-fsign=EBCDIC` so GnuCOBOL reads these signs the way the mainframe does. Without that flag the run produces 43 rejects instead of 38, because amounts are decoded wrongly. To see this, run `SIGN_ENCODING=ASCII ./run-cbtrn02c.sh` (the default is `EBCDIC`).
+- **Signed amounts:** amounts are stored with the mainframe sign convention, where the last character of the number carries both the last digit and the sign. `{`/`A`–`I` mean +0..+9 and `}`/`J`–`R` mean -0..-9. The data is not changed. Instead the program is compiled with `-fsign=EBCDIC` so GnuCOBOL reads these signs the way the mainframe does. Without that flag amounts are decoded wrongly and the run rejects 299 of 300 transactions instead of 38. To see this, run `SIGN_ENCODING=ASCII ./run-cbtrn02c.sh` (the default is `EBCDIC`).
 
 ## Changes to the COBOL
 
@@ -173,7 +173,7 @@ java -cp java/target/cbtrn02c.jar com.carddemo.posttran.Cbact01cMain --input-dir
 
 ## Demo walkthrough
 
-`./demo.sh` runs the CBTRN02C story one step at a time, pausing for Enter between steps (`DEMO_NO_PAUSE=1` runs straight through): the original COBOL (38 rejects), the sign bug with `SIGN_ENCODING=ASCII` (43 rejects), the Java port, then the file-by-file comparison against the saved baseline. Outputs go to `build/demo/`. It needs the same setup as the Java port above.
+`./demo.sh` runs the CBTRN02C story one step at a time, pausing for Enter between steps (`DEMO_NO_PAUSE=1` runs straight through): the original COBOL (38 rejects), the sign bug with `SIGN_ENCODING=ASCII` (299 rejects), the Java port, then the file-by-file comparison against the saved baseline. Outputs go to `build/demo/`. It needs the same setup as the Java port above.
 
 ## Things to know
 
