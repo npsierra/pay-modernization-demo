@@ -1,4 +1,4 @@
-# Pay modernization demo: CardDemo COBOL batch jobs to Java, proven equivalent
+# Pay modernization demo
 
 Demonstration of modernizing legacy COBOL applications off-mainframe with GnuCOBOL and Java 17 using AWS [CardDemo](https://github.com/aws-samples/aws-mainframe-modernization-carddemo), with COBOL and Java proven equivalent on every PR.
 
