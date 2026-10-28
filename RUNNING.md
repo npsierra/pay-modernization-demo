@@ -173,7 +173,7 @@ java -cp java/target/cbtrn02c.jar com.carddemo.posttran.Cbact01cMain --input-dir
 
 ## Demo walkthrough
 
-`./demo.sh` runs the CBTRN02C story one step at a time, pausing for Enter between steps (`DEMO_NO_PAUSE=1` runs straight through): the original COBOL (38 rejects), the sign bug with `SIGN_ENCODING=ASCII` (299 rejects), the Java port, then the file-by-file comparison against the saved baseline. Outputs go to `build/demo/`. It needs the same setup as the Java port above.
+`./demo.sh` runs the CBTRN02C story one step at a time, pausing for Enter between steps (`DEMO_NO_PAUSE=1` runs straight through): the original COBOL (38 rejects), the Java port, the file-by-file comparison against the saved baseline (10 `MATCH` lines), then a deliberate mistake. Step 4 changes one business rule in a throwaway copy of the Java (a transaction exactly at the credit limit is rejected instead of posted) and reruns the edge-case comparison: every Java file `DIFFERS`, and the script names the one transaction that was wrongly rejected (`901 posted exactly at limit`, 400.00). The copy is then deleted; the real Java is never changed. Outputs go to `build/demo/`. It needs the same setup as the Java port above.
 
 ## Things to know
 
