@@ -56,18 +56,22 @@ class AccountExtractBaselineTest {
     }
 
     @Test
-    void abendsWhenAnOutputCannotBeWritten(@TempDir Path dir) throws IOException {
+    void abendsBeforeProcessingWhenAnOutputCannotBeOpened(@TempDir Path dir) throws IOException {
         Path notADirectory = Files.writeString(dir.resolve("out"), "");
         PrintStream original = System.out;
+        ByteArrayOutputStream sysout = new ByteArrayOutputStream();
         int returnCode;
         try {
-            System.setOut(new PrintStream(new ByteArrayOutputStream(), true, StandardCharsets.ISO_8859_1));
+            System.setOut(new PrintStream(sysout, true, StandardCharsets.ISO_8859_1));
             returnCode = Cbact01cMain.run(new String[] {"--input-dir", ROOT.resolve("app/data/ASCII").toString(),
                     "--output-dir", notADirectory.toString()});
         } finally {
             System.setOut(original);
         }
         assertEquals(Main.ABEND, returnCode);
+        assertEquals(String.join(System.lineSeparator(), "START OF EXECUTION OF PROGRAM CBACT01C",
+                "ERROR OPENING OUTFILE30", "FILE STATUS IS: NNNN0030", "ABENDING PROGRAM", ""),
+                sysout.toString(StandardCharsets.ISO_8859_1));
     }
 
     @Test

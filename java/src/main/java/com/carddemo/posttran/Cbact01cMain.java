@@ -1,6 +1,7 @@
 package com.carddemo.posttran;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -11,6 +12,9 @@ import java.nio.file.Path;
  * the COBOL step: 0 normal end, 16 abend (e.g. no account file, as OPEN status 35).
  */
 public final class Cbact01cMain {
+    private static final String[] OUTPUTS = {"OUTFILE", "ARRYFILE", "VBRCFILE"};
+    private static final String[] OPEN_NAMES = {"OUTFILE", "ARRAYFILE", "VBRC FILE"};
+
     private Cbact01cMain() {
     }
 
@@ -41,22 +45,56 @@ public final class Cbact01cMain {
             System.out.println("FILE STATUS IS: NNNN0035");
             return abend();
         }
+        KeyedFile<Account> accounts;
         try {
-            KeyedFile<Account> accounts = PostingFiles.readAccounts(inputDir);
+            accounts = PostingFiles.readAccounts(inputDir);
+        } catch (RuntimeException e) {
+            System.out.println(e.getMessage());
+            return abend();
+        }
+        OutputStream[] outputs = new OutputStream[OUTPUTS.length];
+        try {
+            for (int i = 0; i < OUTPUTS.length; i++) {
+                try {
+                    if (i == 0) {
+                        Files.createDirectories(outputDir);
+                    }
+                    outputs[i] = Files.newOutputStream(outputDir.resolve(OUTPUTS[i] + ".dat"));
+                } catch (IOException e) {
+                    // 2000-OUTFILE-OPEN / 3000-ARRFILE-OPEN / 4000-VBRFILE-OPEN: GnuCOBOL status 30.
+                    System.out.println("START OF EXECUTION OF PROGRAM CBACT01C");
+                    System.out.println("ERROR OPENING " + OPEN_NAMES[i] + "30");
+                    System.out.println("FILE STATUS IS: NNNN0030");
+                    return abend();
+                }
+            }
             AccountExtract extract = new AccountExtract(System.out::println);
             extract.run(accounts.records());
-            Files.createDirectories(outputDir);
-            Files.write(outputDir.resolve("OUTFILE.dat"), extract.outFile());
-            Files.write(outputDir.resolve("ARRYFILE.dat"), extract.arryFile());
-            Files.write(outputDir.resolve("VBRCFILE.dat"), extract.vbrcFile());
+            outputs[0].write(extract.outFile());
+            outputs[1].write(extract.arryFile());
+            outputs[2].write(extract.vbrcFile());
             return 0;
         } catch (IOException e) {
-            // 2000-4000 open / 1350-1575 write failures: the COBOL displays the status and abends.
-            System.out.println("ERROR WRITING OUTPUT FILES: " + e.getMessage());
+            // 1350-1575 write failures: the COBOL displays the status and abends.
+            System.out.println("ACCOUNT FILE WRITE STATUS IS:");
             return abend();
         } catch (RuntimeException e) {
             System.out.println(e.getMessage());
             return abend();
+        } finally {
+            for (OutputStream output : outputs) {
+                closeQuietly(output);
+            }
+        }
+    }
+
+    private static void closeQuietly(OutputStream output) {
+        if (output != null) {
+            try {
+                output.close();
+            } catch (IOException e) {
+                System.err.println("CBACT01C: " + e.getMessage());
+            }
         }
     }
 
