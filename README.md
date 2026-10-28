@@ -24,7 +24,7 @@ Needs [Homebrew](https://brew.sh). Then, in Terminal (from the repo folder):
 
 ```bash
 brew install gnucobol openjdk@17 maven
-printf '%s\n' 'export PATH=/opt/homebrew/opt/openjdk@17/bin:$PATH' 'export JAVA_HOME=/opt/homebrew/opt/openjdk@17' >> ~/.zshrc
+printf '%s\n' "export PATH=$(brew --prefix openjdk@17)/bin:\$PATH" "export JAVA_HOME=$(brew --prefix openjdk@17)" >> ~/.zshrc
 ```
 
 Open a new Terminal window and check the versions:
@@ -35,7 +35,7 @@ java -version              # openjdk version "17..."
 mvn -version
 ```
 
-Homebrew doesn't put Java 17 on the PATH by itself, so the second line above does it (on an Intel Mac, use `/usr/local` instead of `/opt/homebrew`). You can skip the `sudo ln` symlink and `CPPFLAGS` hints that Homebrew prints; nothing here needs them.
+Homebrew doesn't put Java 17 on the PATH by itself, so the second line above does it; `brew --prefix` gives the right folder on both Apple Silicon (`/opt/homebrew`) and Intel (`/usr/local`) Macs. You can skip the `sudo ln` symlink and `CPPFLAGS` hints that Homebrew prints; nothing here needs them.
 
 ## Install on Ubuntu
 
