@@ -5,6 +5,10 @@
       *               indexed file, or unloads an indexed file to text.
       * Usage       : KSDSUTIL LOAD|UNLOAD XREF|ACCT|TCATBAL
       *               KSDSUTIL UNLOAD TRAN
+      *               KSDSUTIL LOAD XREFAIX|DISCGRP
+      *               XREFAIX = card cross-reference with the account
+      *               ID alternate index (CARDXREF.VSAM.AIX, used by
+      *               CBACT04C); DISCGRP = disclosure groups.
       * Files       : DD_TEXTFILE = text side, DD_KSDSFILE = indexed.
       *               Short text lines are space padded to the record
       *               length, so trimmed lines load as full records.
@@ -37,6 +41,20 @@
                   RECORD KEY   IS TCATBAL-KEY
                   FILE STATUS  IS WS-KSDS-STATUS.
 
+           SELECT XREFAIX-FILE ASSIGN TO KSDSFILE
+                  ORGANIZATION IS INDEXED
+                  ACCESS MODE  IS SEQUENTIAL
+                  RECORD KEY   IS XREFAIX-KEY
+                  ALTERNATE RECORD KEY IS XREFAIX-ACCT-ID
+                      WITH DUPLICATES
+                  FILE STATUS  IS WS-KSDS-STATUS.
+
+           SELECT DISCGRP-FILE ASSIGN TO KSDSFILE
+                  ORGANIZATION IS INDEXED
+                  ACCESS MODE  IS SEQUENTIAL
+                  RECORD KEY   IS DISCGRP-KEY
+                  FILE STATUS  IS WS-KSDS-STATUS.
+
            SELECT TRAN-FILE ASSIGN TO KSDSFILE
                   ORGANIZATION IS INDEXED
                   ACCESS MODE  IS SEQUENTIAL
@@ -63,6 +81,18 @@
            05 TCATBAL-KEY              PIC X(17).
            05 FILLER                   PIC X(33).
 
+       FD  XREFAIX-FILE.
+       01  XREFAIX-REC.
+           05 XREFAIX-KEY              PIC X(16).
+           05 FILLER                   PIC X(09).
+           05 XREFAIX-ACCT-ID          PIC X(11).
+           05 FILLER                   PIC X(14).
+
+       FD  DISCGRP-FILE.
+       01  DISCGRP-REC.
+           05 DISCGRP-KEY              PIC X(16).
+           05 FILLER                   PIC X(34).
+
        FD  TRAN-FILE.
        01  TRAN-REC.
            05 TRAN-KEY                 PIC X(16).
@@ -83,6 +113,8 @@
              WHEN 'LOAD'   ALSO 'XREF'    PERFORM 1000-LOAD-XREF
              WHEN 'LOAD'   ALSO 'ACCT'    PERFORM 1100-LOAD-ACCT
              WHEN 'LOAD'   ALSO 'TCATBAL' PERFORM 1200-LOAD-TCATBAL
+             WHEN 'LOAD'   ALSO 'XREFAIX' PERFORM 1300-LOAD-XREFAIX
+             WHEN 'LOAD'   ALSO 'DISCGRP' PERFORM 1400-LOAD-DISCGRP
              WHEN 'UNLOAD' ALSO 'XREF'    PERFORM 2000-UNLOAD-XREF
              WHEN 'UNLOAD' ALSO 'ACCT'    PERFORM 2100-UNLOAD-ACCT
              WHEN 'UNLOAD' ALSO 'TCATBAL' PERFORM 2200-UNLOAD-TCATBAL
@@ -132,6 +164,30 @@
                PERFORM 8100-READ-TEXT
            END-PERFORM
            CLOSE TEXT-FILE TCATBAL-FILE
+           PERFORM 8400-CHECK-CLOSE.
+
+       1300-LOAD-XREFAIX.
+           OPEN INPUT TEXT-FILE OUTPUT XREFAIX-FILE
+           PERFORM 8000-CHECK-OPEN
+           PERFORM 8100-READ-TEXT
+           PERFORM UNTIL WS-EOF = 'Y'
+               WRITE XREFAIX-REC FROM TEXT-REC
+               PERFORM 8200-CHECK-KSDS-IO
+               PERFORM 8100-READ-TEXT
+           END-PERFORM
+           CLOSE TEXT-FILE XREFAIX-FILE
+           PERFORM 8400-CHECK-CLOSE.
+
+       1400-LOAD-DISCGRP.
+           OPEN INPUT TEXT-FILE OUTPUT DISCGRP-FILE
+           PERFORM 8000-CHECK-OPEN
+           PERFORM 8100-READ-TEXT
+           PERFORM UNTIL WS-EOF = 'Y'
+               WRITE DISCGRP-REC FROM TEXT-REC
+               PERFORM 8200-CHECK-KSDS-IO
+               PERFORM 8100-READ-TEXT
+           END-PERFORM
+           CLOSE TEXT-FILE DISCGRP-FILE
            PERFORM 8400-CHECK-CLOSE.
 
        2000-UNLOAD-XREF.
@@ -204,7 +260,8 @@
            END-READ.
 
        8200-CHECK-KSDS-IO.
-           IF WS-KSDS-STATUS NOT = '00'
+      *    02 = written, duplicate alternate key (allowed for XREFAIX).
+           IF WS-KSDS-STATUS NOT = '00' AND NOT = '02'
                DISPLAY 'KSDSUTIL WRITE FAILED: STATUS=' WS-KSDS-STATUS
                        ' KEY=' TEXT-REC(1:17) UPON SYSERR
                MOVE 12 TO RETURN-CODE
