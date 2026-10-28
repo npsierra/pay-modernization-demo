@@ -41,6 +41,10 @@ final class AccountExtract {
         for (Account account : accounts) {
             sysout.accept(getNext(account));
         }
+    }
+
+    /** Displayed only once every output is written, as the COBOL abends at the failing WRITE. */
+    void end() {
         sysout.accept("END OF EXECUTION OF PROGRAM CBACT01C");
     }
 
