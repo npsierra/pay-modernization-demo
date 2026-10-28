@@ -11,6 +11,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 INPUT="$(cd "${1:-$ROOT/app/data/ASCII}" && pwd)"
 GOLDEN="$(cd "${2:-$ROOT/tests/golden/cbtrn02c}" && pwd)"
 OUT="$ROOT/build/cbtrn02c-compare/$(basename "$GOLDEN")"
+rel() { case "$1" in "$ROOT"/*) printf '%s\n' "${1#"$ROOT"/}";; *) printf '%s\n' "$1";; esac; } # show paths relative to the repo
 COBOL_WORK="$OUT/cobol"
 JAVA_OUT="$OUT/java"
 rm -rf "$OUT"
@@ -50,7 +51,7 @@ expect_rc() { # expect_rc <label> <actual rc>
   fi
 }
 
-echo "== Input: $INPUT"
+echo "== Input: $(rel "$INPUT")"
 echo "== COBOL (GnuCOBOL) =="
 set +e
 INPUT_DIR="$INPUT" WORK_DIR="$COBOL_WORK" "$ROOT/run-cbtrn02c.sh" > "$OUT/cobol.log" 2>&1
@@ -83,7 +84,7 @@ check java TCATBALF.txt "$JAVA_OUT/TCATBALF.txt"
 check java DALYREJS.txt "$JAVA_OUT/DALYREJS.txt"
 
 if [ "$FAILED" -ne 0 ]; then
-  echo "RESULT: outputs differ from the baseline (details above; logs in $OUT)"
+  echo "RESULT: outputs differ from the baseline (details above; logs in $(rel "$OUT"))"
   exit 1
 fi
-echo "RESULT: COBOL and Java both match $GOLDEN ($(grep -m1 'TRANSACTIONS PROCESSED' "$GOLDEN/sysout.txt" | tr -s ' '), $(wc -l < "$OUT/normalized/expected-DALYREJS.txt" | tr -d ' ') rejected)"
+echo "RESULT: COBOL and Java both match $(rel "$GOLDEN") ($(grep -m1 'TRANSACTIONS PROCESSED' "$GOLDEN/sysout.txt" | tr -s ' '), $(wc -l < "$OUT/normalized/expected-DALYREJS.txt" | tr -d ' ') rejected)"
