@@ -3,6 +3,7 @@ package com.carddemo.posttran;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.math.RoundingMode;
+import java.util.Locale;
 
 /**
  * Signed zoned-decimal fields ({@code PIC S9(n)V99} in DISPLAY format) as stored in the
@@ -44,7 +45,7 @@ final class ZonedDecimal {
     static String encode(BigDecimal value, int integerDigits, int scale) {
         BigInteger unscaled = truncate(value, integerDigits, scale).unscaledValue();
         int width = integerDigits + scale;
-        String digits = String.format("%0" + width + "d", unscaled.abs());
+        String digits = String.format(Locale.ROOT, "%0" + width + "d", unscaled.abs());
         int last = digits.charAt(width - 1) - '0';
         char signed = unscaled.signum() < 0 ? NEGATIVE.charAt(last) : POSITIVE.charAt(last);
         return digits.substring(0, width - 1) + signed;

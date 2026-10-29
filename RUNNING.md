@@ -184,6 +184,59 @@ java -cp java/target/cbtrn02c.jar com.carddemo.posttran.Cbact01cMain --input-dir
 - **The output files are never closed** by the program (only ACCTFILE is); GnuCOBOL closes them at the end and logs `implicit CLOSE` warnings. Every account is displayed twice in SYSOUT (field by field, then as the full record).
 - **Displaying an amount changes the record:** with `-fsign=EBCDIC`, GnuCOBOL rewrites the sign of each amount it displays, so an unsigned last digit becomes a positive overpunch (`5` becomes `E`) in the record displayed afterwards. The sample data always has signs, so this only shows with the edge and random data. The Java port does the same.
 
+## Transaction detail report (CBTRN03C)
+
+`app/jcl/TRANREPT.jcl` unloads the transaction master, sorts it (STEP05R), then runs `CBTRN03C` (STEP10R). The program prints the daily transaction report: one line per transaction, grouped by card, with an account total when the card changes, a page total and new headings about every 20 lines, and a grand total at the end. It has no PARM and rejects nothing: it ends with return code 0, or abends with U0999 (exit code 16 locally) if a file can't be opened or read, or a card, type or category is not found.
+
+```bash
+./run-cbtrn03c.sh                                     # INPUT_DIR, WORK_DIR, DATEPARM_DATES optional
+tests/compare-cbtrn03c.sh                             # COBOL and Java vs tests/golden/cbtrn03c
+tests/compare-cbtrn03c.sh tests/data/cbtrn03c-edge tests/golden/cbtrn03c-edge
+tests/compare-cbtrn03c.sh tests/data/cbtrn03c-badcard tests/golden/cbtrn03c-badcard 16
+tests/fuzz-cbtrn02c.py 1 200 cbtrn03c
+tests/cbtrn03c_data.py edge tests/data                # regenerates every tests/data/cbtrn03c-* case
+java -cp java/target/cbtrn02c.jar com.carddemo.posttran.Cbtrn03cMain --input-dir DIR --output-dir DIR
+```
+
+| DD | Use | JCL format | Local file (`WORK_DIR/data/`) |
+|---|---|---|---|
+| `TRANFILE` | input, the sorted transactions | sequential, 350 bytes | `TRANFILE.dat`, built from `transact.txt` (or `tranfile.txt` as is) |
+| `CARDXREF` | card to account lookup | VSAM KSDS, 50 bytes, key = card (16) | `CARDXREF.idx`, `KSDSUTIL LOAD XREF` |
+| `TRANTYPE` | type description lookup | VSAM KSDS, 60 bytes, key = type (2) | `TRANTYPE.idx`, `KSDSUTIL LOAD TRANTYPE` (new) |
+| `TRANCATG` | category description lookup | VSAM KSDS, 60 bytes, key = type + category (6) | `TRANCATG.idx`, `KSDSUTIL LOAD TRANCATG` (new) |
+| `DATEPARM` | report date range `YYYY-MM-DD YYYY-MM-DD` | sequential, 80 bytes | `DATEPARM.dat`, from `dateparm.txt` |
+| `TRANREPT` | output, the report | RECFM=FB, LRECL=133 | `TRANREPT.dat`; `WORK_DIR/TRANREPT.txt` has one 133-byte record per line |
+
+The report is plain text with no run-time timestamps, so the comparison only ignores trailing spaces. After an abend the partial report is kept and compared (z/OS would delete it: `DISP=(NEW,CATLG,DELETE)`).
+
+**COBOL changes: none.** Platform stand-ins:
+- *SORT step (STEP05R):* `run-cbtrn03c.sh` keeps transactions whose processing date (columns 305-314) is within the DATEPARM range and sorts them by card number (columns 263-278) with a stable sort, so equal cards keep the unload order. The Java port does the same in `Cbtrn03cMain.readTranFile`. A `tranfile.txt` input skips this step, to test what the program does with input the SORT would never give it. The checked-in JCL hard-codes `2022-01-01` to `2022-07-06` in its SORT controls; those dates were a one-off, and the intended range is the report's DATEPARM range (user decision).
+- *Sample input:* the repo has no transaction-master sample, so the default input is CBTRN02C's saved posted transactions (`tests/golden/cbtrn02c/TRANSACT.txt`) with the date range `2026-10-27 2026-10-27`, the posting day of that baseline.
+- `gnucobol/KSDSUTIL.cbl` gets two load types (`TRANTYPE`, `TRANCATG`) for the 60-byte lookup files; `gnucobol/CEE3ABD.cbl` (existing) for the abend.
+
+**Results on the sample data:** 262 transactions; 451 report lines: 262 detail lines, 49 account totals, 15 page totals, grand total 78,720.36; return code 0.
+
+**Tests:** the sample baseline and 10 hand-made cases in `tests/data/cbtrn03c-*`, each described in `tests/cbtrn03c_data.py` (`edge()`):
+- `edge` (49 detail lines): first and last day of the range and the days just outside it, two cards on one account, zero, negative-zero, unsigned and largest amounts, totals that overflow, descriptions longer than the report columns, CRLF and short lookup lines, equal cards out of transaction-ID order, page breaks from detail lines and from account totals.
+- `empty` (empty transaction file), `blankparm` (blank dates, no transactions), `blankcard` (a blank first card: no lookup, account ID prints as zeros), `stop` (an out-of-range date in the middle of already-sorted input): return code 0.
+- `badcard`, `badtype`, `badcatg` (lookup failures after part of the report is written), `missing` (no transaction file), `noparm` (no DATEPARM file): abend, return code 16.
+
+200 random batches (4,489 detail lines; 10 end in a lookup abend, 31 print no totals) also match. JUnit: `TransactionReportBaselineTest`.
+
+**Mutation check:** making the account total break on account ID instead of card number (in `TransactionReport.run`) still matched the sample data, where each account has one card. The edge-case comparison failed (the two cards of account 901 got one total) and so did the random batches (seed 2). Reverted.
+
+**Behaviour kept as in the original (findings, not fixed):**
+- **The last account's total is never printed:** at end of file the program writes the page and grand totals but no account total.
+- **The last transaction is counted twice:** at end of file its amount is added again to the page and grand totals. The sample grand total, 78,720.36, includes 765.66 twice; the transactions add up to 77,954.70.
+- **A date outside the range silently ends the report:** the first such transaction stops the run with no page or grand total and return code 0. On the mainframe the SORT step filters by date first, which hides this.
+- **An empty transaction file gives an empty report** (no headings, no totals) with return code 0, and so does an empty DATEPARM file.
+- **A blank first card is never looked up:** it equals the initial current card, so no lookup happens and its account ID prints as zeros.
+- **Blank dates are accepted:** a DATEPARM line of spaces with no transactions prints a page total and grand total of zero.
+- **Totals are per card, not per account:** two cards on one account get separate "Account Total" lines.
+- **Page length varies:** a new page starts only when the line counter is exactly a multiple of 20, and the 2-line account total can step past it, so pages on the sample report run from 20 to 60 lines.
+- **Overflowing totals lose their high-order digits** (no ON SIZE ERROR); a negative zero amount prints as blank, like zero.
+- **SYSOUT lists every transaction record in full**, and at end of file prints the last amount and the page total as debug lines (`TRAN-AMT`, `WS-PAGE-TOTAL`).
+
 ## Demo walkthrough
 
 `./demo.sh` runs the CBTRN02C story one step at a time, pausing for Enter between steps (`DEMO_NO_PAUSE=1` runs straight through): the original COBOL (38 rejects), the Java port, the file-by-file comparison against the saved baseline (10 `MATCH` lines), then a deliberate mistake. Step 4 changes one business rule in a throwaway copy of the Java (a transaction exactly at the credit limit is rejected instead of posted) and reruns the comparison twice: on the sample data it still passes (no sample transaction lands exactly on a limit), on the edge cases every Java file `DIFFERS`, and the script names the one transaction that was wrongly rejected (`901 posted exactly at limit`, 400.00). The copy is then deleted; the real Java is never changed. Outputs go to `build/demo/`. It needs the same setup as the Java port above.
