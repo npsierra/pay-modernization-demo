@@ -197,7 +197,7 @@ java -cp java/target/cbtrn02c.jar com.carddemo.posttran.Cbtrn03cMain --input-dir
 The report is plain text with no run-time timestamps, so the comparison only ignores trailing spaces. After an abend the partial report is kept and compared (z/OS would delete it: `DISP=(NEW,CATLG,DELETE)`).
 
 **COBOL changes: none.** Platform stand-ins:
-- *SORT step (STEP05R):* `run-cbtrn03c.sh` keeps transactions whose processing date (columns 305-314) is within the DATEPARM range and sorts them by card number (columns 263-278) with a stable sort, so equal cards keep the unload order. The Java port does the same in `Cbtrn03cMain.readTranFile`. A `tranfile.txt` input skips this step, to test what the program does with input the SORT would never give it.
+- *SORT step (STEP05R):* `run-cbtrn03c.sh` keeps transactions whose processing date (columns 305-314) is within the DATEPARM range and sorts them by card number (columns 263-278) with a stable sort, so equal cards keep the unload order. The Java port does the same in `Cbtrn03cMain.readTranFile`. A `tranfile.txt` input skips this step, to test what the program does with input the SORT would never give it. The checked-in JCL hard-codes `2022-01-01` to `2022-07-06` in its SORT controls; those dates were a one-off, and the intended range is the report's DATEPARM range (user decision).
 - *Sample input:* the repo has no transaction-master sample, so the default input is CBTRN02C's saved posted transactions (`tests/golden/cbtrn02c/TRANSACT.txt`) with the date range `2026-10-27 2026-10-27`, the posting day of that baseline.
 - `gnucobol/KSDSUTIL.cbl` gets two load types (`TRANTYPE`, `TRANCATG`) for the 60-byte lookup files; `gnucobol/CEE3ABD.cbl` (existing) for the abend.
 
