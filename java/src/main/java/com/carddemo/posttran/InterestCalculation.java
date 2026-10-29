@@ -2,6 +2,7 @@ package com.carddemo.posttran;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Locale;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -39,7 +40,7 @@ final class InterestCalculation {
             xrefByAccount.putIfAbsent(xref.accountId(), xref);
         }
         this.disclosureGroups = disclosureGroups;
-        this.parmDate = String.format("%-10.10s", parmDate);
+        this.parmDate = String.format(Locale.ROOT, "%-10.10s", parmDate);
         this.timestamp = timestamp;
         this.sysout = sysout;
     }
@@ -70,7 +71,7 @@ final class InterestCalculation {
                         balance.balance().multiply(rate).divide(MONTHS_TIMES_PERCENT, 10, RoundingMode.DOWN), 9, 2);
                 totalInterest = ZonedDecimal.truncate(totalInterest.add(monthly), 9, 2);
                 suffix = (suffix + 1) % 1_000_000;
-                transactions.add(interestTransaction(String.format("%06d", suffix), account, xref, monthly));
+                transactions.add(interestTransaction(String.format(Locale.ROOT, "%06d", suffix), account, xref, monthly));
             }
         }
         sysout.accept("END OF EXECUTION OF PROGRAM CBACT04C");
@@ -119,8 +120,8 @@ final class InterestCalculation {
         String ts = timestamp.get();
         String record = parmDate + suffix
                 + "01" + "0005"
-                + String.format("%-10s", "System")
-                + String.format("%-100s", "Int. for a/c " + account.id())
+                + String.format(Locale.ROOT, "%-10s", "System")
+                + String.format(Locale.ROOT, "%-100s", "Int. for a/c " + account.id())
                 + ZonedDecimal.encode(amount, 9, 2)
                 + "000000000"
                 + " ".repeat(50) + " ".repeat(50) + " ".repeat(10)

@@ -1,5 +1,7 @@
 package com.carddemo.posttran;
 
+import java.util.Locale;
+
 /** Validation failure codes written to the rejects file (WS-VALIDATION-TRAILER). */
 enum RejectReason {
     INVALID_CARD(100, "INVALID CARD NUMBER FOUND"),
@@ -21,6 +23,6 @@ enum RejectReason {
 
     /** 80-byte trailer: 4-digit code followed by a 76-byte description. */
     String trailer() {
-        return String.format("%04d%-76s", code, description);
+        return String.format(Locale.ROOT, "%04d%-76s", code, description);
     }
 }
