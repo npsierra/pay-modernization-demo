@@ -5,6 +5,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Locale;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -73,7 +74,7 @@ final class PostingFiles {
             if (line.length() > length) {
                 throw new AbendException(file + ": record longer than " + length + " bytes");
             }
-            keyed.write(parse.apply(String.format("%-" + length + "s", line)));
+            keyed.write(parse.apply(String.format(Locale.ROOT, "%-" + length + "s", line)));
         }
         return keyed;
     }

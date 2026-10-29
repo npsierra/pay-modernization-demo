@@ -1,5 +1,7 @@
 package com.carddemo.posttran;
 
+import java.util.Locale;
+
 /**
  * Port of the assembler date routine COBDATFT (app/asm/COBDATFT.asm, stand-in
  * gnucobol/COBDATFT.cbl). Works on the 80-byte CODATECN-REC parameter in place and changes
@@ -51,7 +53,7 @@ final class DateFormatRoutine {
 
     /** MOVE of a shorter field into CODATECN-INP-DATE: left-justified, space padded. */
     static void setInputDate(char[] rec, String date) {
-        String padded = String.format("%-" + DATE_LENGTH + "s", date);
+        String padded = String.format(Locale.ROOT, "%-" + DATE_LENGTH + "s", date);
         padded.getChars(0, DATE_LENGTH, rec, IN_DATE);
     }
 
@@ -64,6 +66,6 @@ final class DateFormatRoutine {
     }
 
     private static void invalid(char[] rec) {
-        String.format("%-38s", "INVALID INPUT").getChars(0, 38, rec, ERROR_MSG);
+        String.format(Locale.ROOT, "%-38s", "INVALID INPUT").getChars(0, 38, rec, ERROR_MSG);
     }
 }

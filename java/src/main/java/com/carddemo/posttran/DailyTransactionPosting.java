@@ -1,6 +1,7 @@
 package com.carddemo.posttran;
 
 import java.math.BigDecimal;
+import java.util.Locale;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -56,8 +57,8 @@ final class DailyTransactionPosting {
             }
         }
         Result result = new Result(processed, rejects.size());
-        sysout.accept(String.format("TRANSACTIONS PROCESSED :%09d", result.processed()));
-        sysout.accept(String.format("TRANSACTIONS REJECTED  :%09d", result.rejected()));
+        sysout.accept(String.format(Locale.ROOT, "TRANSACTIONS PROCESSED :%09d", result.processed()));
+        sysout.accept(String.format(Locale.ROOT, "TRANSACTIONS REJECTED  :%09d", result.rejected()));
         sysout.accept("END OF EXECUTION OF PROGRAM CBTRN02C");
         return result;
     }
