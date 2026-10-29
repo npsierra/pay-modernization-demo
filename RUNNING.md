@@ -198,6 +198,8 @@ tests/compare-cbtrn01c.sh tests/data/cbtrn01c-no-custdata tests/golden/cbtrn01c-
 tests/fuzz-cbtrn02c.py 1 200 cbtrn01c
 tests/cbtrn01c_data.py edge DIR [full|empty|no-dailytran|no-custdata]   # rebuild the edge inputs
 java -cp java/target/cbtrn02c.jar com.carddemo.posttran.Cbtrn01cMain --input-dir DIR [--transact-file FILE|none]
+# Java has no fallback for TRANFILE: on the sample data pass it explicitly, as tests/compare-cbtrn01c.sh does
+java -cp java/target/cbtrn02c.jar com.carddemo.posttran.Cbtrn01cMain --input-dir app/data/ASCII --transact-file tests/golden/cbtrn02c/TRANSACT.txt
 ```
 
 | DD | Use | Format | Local file (`WORK_DIR/data/`) |
