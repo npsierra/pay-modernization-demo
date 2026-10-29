@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.function.Consumer;
 
 /**
@@ -221,7 +222,7 @@ final class TransactionReport {
         if (truncated.signum() == 0) {
             return " ".repeat(15);
         }
-        String digits = String.format("%011d", truncated.unscaledValue().abs());
+        String digits = String.format(Locale.ROOT, "%011d", truncated.unscaledValue().abs());
         String grouped = digits.substring(0, 3) + "," + digits.substring(3, 6) + "," + digits.substring(6, 9);
         StringBuilder integer = new StringBuilder(grouped);
         for (int i = 0; i < integer.length() && (integer.charAt(i) == '0' || integer.charAt(i) == ','); i++) {

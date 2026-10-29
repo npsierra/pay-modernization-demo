@@ -5,6 +5,7 @@ import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -70,7 +71,7 @@ final class InterestCalculation {
                         balance.balance().multiply(rate).divide(MONTHS_TIMES_PERCENT, 10, RoundingMode.DOWN), 9, 2);
                 totalInterest = ZonedDecimal.truncate(totalInterest.add(monthly), 9, 2);
                 suffix = (suffix + 1) % 1_000_000;
-                transactions.add(interestTransaction(String.format("%06d", suffix), account, xref, monthly));
+                transactions.add(interestTransaction(String.format(Locale.ROOT, "%06d", suffix), account, xref, monthly));
             }
         }
         sysout.accept("END OF EXECUTION OF PROGRAM CBACT04C");
