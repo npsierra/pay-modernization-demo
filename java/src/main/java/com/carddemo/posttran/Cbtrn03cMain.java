@@ -44,19 +44,18 @@ public final class Cbtrn03cMain {
                     + " --input-dir DIR --output-dir DIR");
             return 8;
         }
-        Path dateParmFile = inputDir.resolve(DATE_PARMS);
-        List<String> dateParms = Files.isRegularFile(dateParmFile)
-                ? fixed(PostingFiles.lines(dateParmFile), 80) : null;
-        List<String> transactions = readTranFile(inputDir, dateParms);
-
         System.out.println("START OF EXECUTION OF PROGRAM CBTRN03C");
-        // 0000-0500 opens, in the COBOL order; a missing file is OPEN status 35.
-        if (transactions == null) {
-            return openFailed("TRANFILE");
-        }
         Path reportFile = outputDir.resolve(REPORT);
         TransactionReport report = null;
         try {
+            Path dateParmFile = inputDir.resolve(DATE_PARMS);
+            List<String> dateParms = Files.isRegularFile(dateParmFile)
+                    ? fixed(PostingFiles.lines(dateParmFile), 80) : null;
+            List<String> transactions = readTranFile(inputDir, dateParms);
+            // 0000-0500 opens, in the COBOL order; a missing file is OPEN status 35.
+            if (transactions == null) {
+                return openFailed("TRANFILE");
+            }
             Files.createDirectories(outputDir);
             Files.write(reportFile, new byte[0]);
             if (!Files.isRegularFile(inputDir.resolve(PostingFiles.CARD_XREF))) {
