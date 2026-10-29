@@ -17,3 +17,6 @@ build/cbact04c-compare/
 build/demo/
 gnucobol/work-cbact01c/
 build/cbact01c-compare/
+gnucobol/work-cbtrn01c/
+build/cbtrn01c-compare/
+build/golden-tmp/
