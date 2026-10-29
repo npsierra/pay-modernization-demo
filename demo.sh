@@ -174,7 +174,7 @@ EDGE_N="$(wc -l < "$EDGE" | tr -d ' ')"; EDGE_R="$(wc -l < "$EDGE_REJ" | tr -d '
 reasons="$(cut -c351-354 "$EDGE_REJ" | sort | uniq -c | awk '
   { name[ "0100" ] = "unknown card"; name[ "0101" ] = "missing account"; name[ "0102" ] = "over limit"; name[ "0103" ] = "expired"
     printf "   %d %s (%s)\n", $1, name[$2], substr($2, 2) }')"
-printf ' Then the %s hand-written edge cases (tests/data/cbtrn02c-edge):\n' "$EDGE_N"
+printf ' Then the %s targeted edge cases (tests/data/cbtrn02c-edge):\n' "$EDGE_N"
 printf '  %s posted\n  %s rejected:\n%s\n' "$((EDGE_N - EDGE_R))" "$EDGE_R" "$reasons"
 printf ' Including: %s901 posted exactly at limit%s  <- the one that matters\n' "$YELLOW$BOLD" "$RESET"
 echo
@@ -210,6 +210,6 @@ say "400.00 of credit left, a 400.00 purchase." \
     " - CBACT04C  calculates interest" \
     " - CBACT01C  extracts accounts" \
     "" \
-    "Sample data, hand-written edge cases, 200 generated batches each." \
+    "Sample data, targeted edge cases, 200 generated batches each." \
     "COBOL and Java have to agree on every file."
 printf ' %sEvery change must now prove it matches the original before approval.%s\n\n' "$BOLD" "$RESET"
