@@ -141,11 +141,13 @@ step "3. Prove it: COBOL and Java vs the saved baseline, file by file" \
   "ACCTDATA  account balances" \
   "TCATBALF  balances per transaction category" \
   "DALYREJS  rejected transactions, with the reason"
+COMPARE_RC=0
 spin "Running COBOL and Java, comparing 5 files each with tests/golden/cbtrn02c" "$OUT/compare.log" \
-  "$ROOT/tests/compare-cbtrn02c.sh"
+  "$ROOT/tests/compare-cbtrn02c.sh" || COMPARE_RC=$?
 echo
 paint < "$OUT/compare.log"
 echo
+if [ "$COMPARE_RC" -ne 0 ]; then echo " Comparison failed (rc $COMPARE_RC), see build/demo/compare.log"; exit "$COMPARE_RC"; fi
 
 step "4. Break one business rule in the Java. Does the check catch it?" \
   "A throwaway copy of the Java gets one rule wrong:" \
