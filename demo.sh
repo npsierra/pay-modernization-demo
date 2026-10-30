@@ -2,7 +2,8 @@
 # Live demo of the CBTRN02C modernization, one step at a time:
 #   1. original COBOL under GnuCOBOL   2. the Java port
 #   3. COBOL vs Java vs saved baseline, file by file
-#   4. break one business rule in a throwaway copy of the Java and watch the comparison catch it
+#   4. break one business rule in a throwaway copy of the Java: the sample data misses it
+#   5. the targeted edge cases catch it   6. what runs on every pull request
 # Press Enter between steps; set DEMO_NO_PAUSE=1 to run straight through.
 set -euo pipefail
 
@@ -23,9 +24,9 @@ else
   BOLD= GREEN= RED= YELLOW= CYAN= RESET=
 fi
 
-step() { # step <title> [line ...] -- one short line each, no wrapping
+step() { # step <N. title> [line ...] -- one short line each, no wrapping
   if [ -z "${DEMO_NO_PAUSE:-}" ] && [ -t 0 ]; then
-    printf '\n[Enter] %s ' "$1"; read -r _
+    printf '\n[Enter for step %s] ' "${1%%.*}"; read -r _
   fi
   printf '%s==================================================================\n %s\n==================================================================%s\n' "$CYAN$BOLD" "$1" "$RESET"
   shift
@@ -95,45 +96,44 @@ build() { (cd "$1" && mvn -q -B package -DskipTests); }
 if [ ! -f "$JAR" ]; then
   spin "Building the Java port (first run only)" "$OUT/build.log" build "$ROOT/java"
 fi
+rm -rf "$BROKEN"
 
-# Step 4's broken copy: same Java with one rule changed -- a transaction that lands exactly
-# on the credit limit is rejected instead of posted (< becomes <=). The real code is untouched.
-rm -rf "$BROKEN" && mkdir -p "$BROKEN"
-cp -R "$ROOT/java/pom.xml" "$ROOT/java/src" "$BROKEN/"
-RULE="$BROKEN/src/main/java/com/carddemo/posttran/TransactionValidator.java"
-sed -i.orig 's/creditLimit().compareTo(projected) < 0/creditLimit().compareTo(projected) <= 0/' "$RULE"
-if cmp -s "$RULE" "$RULE.orig"; then echo "could not apply the step 4 rule change"; exit 1; fi
-spin "Preparing step 4" "$OUT/build-broken.log" build "$BROKEN"
+say "CBTRN02C posts one day of card transactions to the accounts." \
+    "First the original COBOL, then its Java port, then the proof that they agree."
 
-step "1. Original COBOL, unchanged, run here with GnuCOBOL" \
-  "Program: app/cbl/CBTRN02C.cbl, not modified." \
-  "Input: 300 daily transactions." \
-  "Watch: how many post, how many are rejected, and why."
+step "1. The original COBOL, running here under GnuCOBOL" \
+  "Program: app/cbl/CBTRN02C.cbl, unchanged since it left the mainframe." \
+  "Input: one day of card transactions, 300 of them." \
+  "Watch for: how many post, how many are rejected, and why."
 run "$OUT/cobol" SIGN_ENCODING=EBCDIC
 counts "$OUT/cobol/sysout.txt" "$OUT/cobol/rejects.txt"
-say "One reject reason: the sample data trips one of the four rules." \
+say "All 38 rejects are over-limit:" \
+    "the sample data exercises one of the program's four reject rules." \
     "" \
-    "Amounts carry their sign in the last character, the mainframe way:"
+    "Why the amounts look odd: the mainframe puts the sign in the last character."
 printf '  %-13s %-10s %s\n' "In the file" "Means" ""
 for pat in '[}J-R]$' '[{A-I]$'; do
   a="$(cut -c133-143 "$ROOT/app/data/ASCII/dailytran.txt" | grep -m1 -E "$pat")"
   printf '  %-13s %-10s (%s)\n' "$a" "$(echo "$a" | signed)" "$(echo "$a" | explain_sign)"
 done
-say "Read them the wrong way: 299 of 300 rejected instead of 38."
+say "Read the sign the wrong way and 299 of 300 are rejected." \
+    "Same program, same data."
 
-step "2. Java port, same input" \
-  "Program: the Java 17 port in java/." \
-  "Watch: the same counts, the same rejects."
+step "2. The Java port, same input" \
+  "Program: the Java 17 port in java/, written one COBOL paragraph at a time." \
+  "Watch for: the same counts and the same 38 rejects."
 JAVA_RC=0
 spin "Running Java CBTRN02C    in: app/data/ASCII   out: build/demo/java" "$OUT/java.sysout.txt" \
   java -jar "$JAR" --input-dir "$ROOT/app/data/ASCII" --output-dir "$OUT/java" || JAVA_RC=$?
 echo " Return code: $JAVA_RC"
 if [ "$JAVA_RC" -ne 4 ]; then echo "Java run failed (expected rc 4), see $OUT/java.sysout.txt"; exit 1; fi
 counts "$OUT/java.sysout.txt" "$OUT/java/DALYREJS.txt"
-echo
+say "Same totals." \
+    "Totals can agree while the files differ, so step 3 compares the files."
 
-step "3. Prove it: COBOL and Java vs the saved baseline, file by file" \
-  "Baseline: a saved copy of the COBOL output." \
+step "3. Compare the output files, byte for byte" \
+  "Baseline: the COBOL's output, saved in tests/golden/cbtrn02c." \
+  "Both programs run again and all five output files are compared." \
   "MATCH = identical, byte for byte." \
   "" \
   "sysout    program log" \
@@ -146,41 +146,55 @@ spin "Running COBOL and Java, comparing 5 files each with tests/golden/cbtrn02c"
   "$ROOT/tests/compare-cbtrn02c.sh" || COMPARE_RC=$?
 echo
 paint < "$OUT/compare.log"
-echo
 if [ "$COMPARE_RC" -ne 0 ]; then echo " Comparison failed (rc $COMPARE_RC), see build/demo/compare.log"; exit "$COMPARE_RC"; fi
+say "Five files, identical." \
+    "This comparison is the proof that the port is faithful." \
+    "The next two steps show how hard it is to fool."
 
-step "4. Break one business rule in the Java. Does the check catch it?" \
+step "4. Make one mistake in the Java. Does the sample data notice?" \
   "A throwaway copy of the Java gets one rule wrong:" \
-  "a purchase landing exactly on the credit limit is rejected instead of posted." \
-  "The real Java is untouched."
+  "a purchase exactly at the credit limit is rejected instead of posted." \
+  "The real Java is not touched."
+mkdir -p "$BROKEN"
+cp -R "$ROOT/java/pom.xml" "$ROOT/java/src" "$BROKEN/"
+RULE="$BROKEN/src/main/java/com/carddemo/posttran/TransactionValidator.java"
+sed -i.orig 's/creditLimit().compareTo(projected) < 0/creditLimit().compareTo(projected) <= 0/' "$RULE"
+if cmp -s "$RULE" "$RULE.orig"; then echo "could not apply the step 4 rule change"; exit 1; fi
 printf ' The change (< becomes <=):\n'
 diff "$RULE.orig" "$RULE" | sed "s/^</  ${GREEN}</; s/^>/  ${RED}>/; s/\$/${RESET}/; /^[0-9]/d" || true
-EDGE="$ROOT/tests/data/cbtrn02c-edge/dailytran.txt"
-say "First, the 300 sample transactions."
+echo
+spin "Compiling the changed copy   out: build/demo/java-broken" "$OUT/build-broken.log" build "$BROKEN"
 SAMPLE_RC=0
 CBTRN02C_JAR="$BROKEN/target/cbtrn02c.jar" \
-  spin "Running the broken Java   in: app/data/ASCII   vs: tests/golden/cbtrn02c" "$OUT/broken-sample.log" \
+  spin "Running the changed copy   in: app/data/ASCII   vs: tests/golden/cbtrn02c" "$OUT/broken-sample.log" \
   "$ROOT/tests/compare-cbtrn02c.sh" || SAMPLE_RC=$?
+echo
 grep -E '^RESULT' "$OUT/broken-sample.log" | sed 's/ (details above.*//' | paint
 if [ "$SAMPLE_RC" -eq 0 ]; then
-  echo
-  printf ' %sSample data alone: MISSED it.%s\n' "$YELLOW$BOLD" "$RESET"
-  say "No sample transaction lands exactly on a limit."
+  say "The changed copy passes." \
+      "No sample transaction lands exactly on a limit," \
+      "so the sample data cannot tell the two programs apart."
+  printf ' %sSample data alone would have let this mistake through.%s\n\n' "$YELLOW$BOLD" "$RESET"
 else
-  say "Sample data: caught it already."
+  say "The sample data caught it already."
 fi
+
+EDGE="$ROOT/tests/data/cbtrn02c-edge/dailytran.txt"
 EDGE_REJ="$ROOT/tests/golden/cbtrn02c-edge/DALYREJS.txt"
 EDGE_N="$(wc -l < "$EDGE" | tr -d ' ')"; EDGE_R="$(wc -l < "$EDGE_REJ" | tr -d ' ')"
 reasons="$(cut -c351-354 "$EDGE_REJ" | sort | uniq -c | awk '
   { name[ "0100" ] = "unknown card"; name[ "0101" ] = "missing account"; name[ "0102" ] = "over limit"; name[ "0103" ] = "expired"
     printf "   %d %s (%s)\n", $1, name[$2], substr($2, 2) }')"
-printf ' Then the %s targeted edge cases (tests/data/cbtrn02c-edge):\n' "$EDGE_N"
+step "5. The same mistake, against the targeted edge cases" \
+  "Input: $EDGE_N transactions written from the COBOL's rules, one per boundary." \
+  "Folder: tests/data/cbtrn02c-edge." \
+  "Watch for: the one transaction the two programs disagree on."
 printf '  %s posted\n  %s rejected:\n%s\n' "$((EDGE_N - EDGE_R))" "$EDGE_R" "$reasons"
-printf ' Including: %s901 posted exactly at limit%s  <- the one that matters\n' "$YELLOW$BOLD" "$RESET"
+printf ' Including: %s901 posted exactly at limit%s  <- the boundary the mistake sits on\n' "$YELLOW$BOLD" "$RESET"
 echo
 BROKEN_RC=0
 CBTRN02C_JAR="$BROKEN/target/cbtrn02c.jar" \
-  spin "Running COBOL and the broken Java   in: tests/data/cbtrn02c-edge" "$OUT/broken-compare.log" \
+  spin "Running COBOL and the changed copy   in: tests/data/cbtrn02c-edge" "$OUT/broken-compare.log" \
   "$ROOT/tests/compare-cbtrn02c.sh" "$ROOT/tests/data/cbtrn02c-edge" "$ROOT/tests/golden/cbtrn02c-edge" || BROKEN_RC=$?
 echo
 awk '/^== COBOL/ { c = 1; next }
@@ -189,27 +203,30 @@ awk '/^== COBOL/ { c = 1; next }
      /^  (MATCH|DIFFERS) |^RESULT/' "$OUT/broken-compare.log" | sed 's/ (details above.*//' | paint
 if [ "$BROKEN_RC" -eq 0 ]; then echo " Not caught -- the comparison should have failed"; exit 1; fi
 echo
-printf ' %sEdge cases: CAUGHT it.%s\n' "$GREEN$BOLD" "$RESET"
+printf ' %sThe edge cases caught it.%s\n' "$GREEN$BOLD" "$RESET"
 NORM="$ROOT/build/cbtrn02c-compare/cbtrn02c-edge/normalized"
-say "Rejected by the broken Java, posted by the COBOL:"
+say "The one transaction the changed copy rejects and the COBOL posts:"
 { diff "$NORM/expected-DALYREJS.txt" "$NORM/java-DALYREJS.txt" || true; } | grep '^>' | while IFS= read -r line; do
   rec="${line#> }"
   printf '  %sid %s  amount %s  "%s"\n  -> %s%s\n' "$YELLOW$BOLD" "${rec:0:16}" "$(echo "${rec:132:11}" | signed)" \
     "$(echo "${rec:32:100}" | sed 's/ *$//')" "$(echo "${rec:350:80}" | sed 's/ *$//')" "$RESET"
 done
 rm -rf "$BROKEN"
-say "400.00 of credit left, a 400.00 purchase." \
-    "COBOL posts it. The broken Java rejects it." \
-    "One character. Invisible on the sample data. Caught here." \
+say "The account had 400.00 of credit left; the purchase was 400.00." \
+    "The COBOL posts it, the changed copy rejects it." \
     "" \
-    "Throwaway copy deleted. The real Java was never changed." \
+    "A one-character change the sample data could not see," \
+    "found by one targeted transaction." \
     "" \
-    "This check runs on every pull request, for all three programs ported so far:" \
-    "" \
-    " - CBTRN02C  posts transactions" \
-    " - CBACT04C  calculates interest" \
-    " - CBACT01C  extracts accounts" \
-    "" \
-    "Sample data, targeted edge cases, 200 generated batches each." \
-    "COBOL and Java have to agree on every file."
-printf ' %sEvery change must now prove it matches the original before approval.%s\n\n' "$BOLD" "$RESET"
+    "The throwaway copy is deleted. The real Java was never touched."
+
+step "6. What runs on every pull request" \
+  "This comparison runs on every pull request, for the three ported programs:" \
+  "" \
+  " - CBTRN02C  posts transactions" \
+  " - CBACT04C  calculates interest" \
+  " - CBACT01C  extracts accounts" \
+  "" \
+  "Each one on the sample data, the targeted edge cases and 200 generated batches." \
+  "A change merges only when COBOL and Java agree on every file."
+printf ' %sA payment program only changes once it proves it still matches the original.%s\n\n' "$BOLD" "$RESET"
