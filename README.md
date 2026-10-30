@@ -49,7 +49,7 @@ gnucobol/install-gnucobol.sh   # installs its build tools, then builds GnuCOBOL 
 ```bash
 ./run-cbtrn02c.sh              # original COBOL: posts 300 sample transactions, 38 rejected
 (cd java && mvn -B package)    # builds the Java and runs its unit tests
-./demo.sh                      # step by step: COBOL, Java, file comparison, a broken rule caught
+./demo.sh                      # six steps: COBOL, Java, file comparison, a mistake the sample data misses and the edge cases catch
 tests/compare-cbtrn02c.sh      # COBOL vs Java vs baseline on the sample data
 ```
 
