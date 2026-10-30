@@ -7,7 +7,7 @@ For each CardDemo batch program:
 1. Run the original COBOL, unchanged, on Linux or macOS with GnuCOBOL 3.2.
 2. Save its output as the baseline.
 3. Port the program to Java 17.
-4. Prove the COBOL and Java produce identical files on the sample data, hand-made edge cases and 200 random batches. A GitHub check repeats this on every pull request.
+4. Prove the COBOL and Java produce identical files on the sample data, targeted edge cases and 200 random batches. A GitHub check repeats this on every pull request.
 
 Programs done so far: CBTRN02C (daily transaction posting), CBACT04C (interest calculation) and CBACT01C (account file extract). Details, results and findings for each are in [RUNNING.md](RUNNING.md).
 
