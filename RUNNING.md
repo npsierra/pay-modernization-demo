@@ -184,6 +184,50 @@ java -cp java/target/cbtrn02c.jar com.carddemo.posttran.Cbact01cMain --input-dir
 - **The output files are never closed** by the program (only ACCTFILE is); GnuCOBOL closes them at the end and logs `implicit CLOSE` warnings. Every account is displayed twice in SYSOUT (field by field, then as the full record).
 - **Displaying an amount changes the record:** with `-fsign=EBCDIC`, GnuCOBOL rewrites the sign of each amount it displays, so an unsigned last digit becomes a positive overpunch (`5` becomes `E`) in the record displayed afterwards. The sample data always has signs, so this only shows with the edge and random data. The Java port does the same.
 
+## Daily transaction verification (CBTRN01C)
+
+`CBTRN01C` reads each daily transaction, displays it, looks its card up in the card cross-reference and reads the card's account, logging each step. It **writes and updates nothing**: SYSOUT is its only output. No JCL in `app/jcl` runs it, so `run-cbtrn01c.sh` names each DD after the program's `ASSIGN` clause. It has no PARM. It ends with return code 0, even when cards or accounts are not found (those are only log lines), or abends with U0999 (exit code 16 locally) if a file can't be opened or read.
+
+```bash
+./run-cbtrn01c.sh                                     # INPUT_DIR, WORK_DIR, TRANSACT_TXT optional
+tests/compare-cbtrn01c.sh                             # COBOL and Java vs tests/golden/cbtrn01c
+tests/compare-cbtrn01c.sh tests/data/cbtrn01c-edge tests/golden/cbtrn01c-edge
+tests/compare-cbtrn01c.sh tests/data/cbtrn01c-empty tests/golden/cbtrn01c-empty
+tests/compare-cbtrn01c.sh tests/data/cbtrn01c-abend tests/golden/cbtrn01c-abend 16
+tests/compare-cbtrn01c.sh tests/data/cbtrn01c-no-custdata tests/golden/cbtrn01c-no-custdata 16
+tests/fuzz-cbtrn02c.py 1 200 cbtrn01c
+tests/cbtrn01c_data.py edge DIR [full|empty|no-dailytran|no-custdata]   # rebuild the edge inputs
+java -cp java/target/cbtrn02c.jar com.carddemo.posttran.Cbtrn01cMain --input-dir DIR [--transact-file FILE|none]
+# Java has no fallback for TRANFILE: on the sample data pass it explicitly, as tests/compare-cbtrn01c.sh does
+java -cp java/target/cbtrn02c.jar com.carddemo.posttran.Cbtrn01cMain --input-dir app/data/ASCII --transact-file tests/golden/cbtrn02c/TRANSACT.txt
+```
+
+| DD | Use | Format | Local file (`WORK_DIR/data/`) |
+|---|---|---|---|
+| `DALYTRAN` | input, read in order | sequential, 350 bytes | `DALYTRAN.dat` from `dailytran.txt` (line ends dropped) |
+| `XREFFILE` | input, random read by card number | KSDS, 50 bytes, key 16 | `CARDXREF.idx`, `KSDSUTIL LOAD XREF` |
+| `ACCTFILE` | input, random read by account ID | KSDS, 300 bytes, key 11 | `ACCTDATA.idx`, `KSDSUTIL LOAD ACCT` |
+| `CUSTFILE` | opened, never read | KSDS, 500 bytes, key 9 | `CUSTDATA.idx`, `KSDSUTIL LOAD CUST` (new) |
+| `CARDFILE` | opened, never read | KSDS, 150 bytes, key 16 | `CARDDATA.idx`, `KSDSUTIL LOAD CARD` (new) |
+| `TRANFILE` | opened, never read | KSDS, 350 bytes, key 16 | `TRANSACT.idx`, `KSDSUTIL LOAD TRAN` (new) from `transact.txt` in the input directory, else CBTRN02C's saved output `tests/golden/cbtrn02c/TRANSACT.txt` (there is no transaction master in `app/data/ASCII`) |
+
+A missing input file leaves its DD pointing at nothing, so the OPEN fails with status 35 and the program abends, as it would on the mainframe with no dataset.
+
+**COBOL changes: none.** Platform stand-ins: `gnucobol/CEE3ABD.cbl` (existing) for the abend. `gnucobol/KSDSUTIL.cbl` gained `LOAD CUST`, `LOAD CARD` and `LOAD TRAN`, and its text record grew from 350 to 500 bytes to hold customer records (unload output is unchanged because GnuCOBOL drops trailing spaces on line-sequential writes).
+
+**Results on the sample data:** 300 transactions read, 301 card lookups (see the first finding), all cards and accounts found, 0 not verified; 1,807 SYSOUT lines; return code 0.
+
+**Tests:** the sample baseline; 9 hand-made transactions (`tests/data/cbtrn01c-edge`: card and account found, card found but account missing, unknown card, blank card number, short and CRLF cross-reference lines, the largest account ID and amount, a repeated card, an unknown card as the last record); an empty daily file; a missing daily file and a missing customer file (both abend, rc 16); and 200 random batches (3,562 transactions). All match. JUnit: `TransactionVerificationBaselineTest`.
+
+**Mutation check:** dropping the `ACCOUNT ... NOT FOUND` line in `TransactionVerification.run` still matched the sample data (every sample card has an account), but the edge-case comparison and the random batches (seed 2) both failed. Reverted.
+
+**Behaviour kept as in the original (findings, not fixed):**
+- **The last transaction is checked twice.** After the read hits end of file, the loop still runs the card and account lookup with the last record, so its lines appear twice in the log. On an empty file it looks up a blank card and logs `CARD NUMBER ... COULD NOT BE VERIFIED` for a transaction that doesn't exist. (GnuCOBOL starts the record as spaces; on z/OS the uninitialised record could hold anything.)
+- **Three files are opened but never used** (customers, cards, transaction master). A missing customer file still stops the job (`tests/data/cbtrn01c-no-custdata`).
+- **Wrong message on one error:** if closing the daily transaction file fails, `9000-DALYTRAN-CLOSE` says `ERROR CLOSING CUSTOMER FILE` and shows the customer file's status.
+- **Nothing is recorded:** unknown cards and missing accounts are only log lines; the return code stays 0, so a scheduler can't tell a clean run from one where every card failed.
+- **No JCL runs the program**: it looks like a development or verification step that CBTRN02C (which does the same checks and writes rejects) replaced.
+
 ## Demo walkthrough
 
 `./demo.sh` runs the CBTRN02C story in six steps, pausing for Enter between them (`DEMO_NO_PAUSE=1` runs straight through): (1) the original COBOL (38 rejects), (2) the Java port, (3) the file-by-file comparison against the saved baseline (10 `MATCH` lines), (4) a deliberate mistake: one business rule is changed in a throwaway copy of the Java (a transaction exactly at the credit limit is rejected instead of posted), the copy is compiled and compared on the sample data, where it still passes because no sample transaction lands exactly on a limit, (5) the same copy on the targeted edge cases, where every Java file `DIFFERS` and the script names the one transaction that was wrongly rejected (`901 posted exactly at limit`, 400.00), then deletes the copy, (6) what the pull-request check covers for the three ported programs. The real Java is never changed. Outputs go to `build/demo/`. It needs the same setup as the Java port above.

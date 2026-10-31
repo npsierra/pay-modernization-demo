@@ -59,6 +59,11 @@ final class PostingFiles {
                 DisclosureGroup::parse, DisclosureGroup::key);
     }
 
+    /** A keyed file of raw fixed-length records, keyed on the first {@code keyLength} bytes. */
+    static KeyedFile<String> readRecords(Path file, String name, int length, int keyLength) {
+        return load(file, name, length, Function.identity(), record -> record.substring(0, keyLength));
+    }
+
     static void writeOutputs(DailyTransactionPosting posting, Path outputDir) {
         write(outputDir.resolve(TRANSACTIONS_OUT), posting.transactionRecords());
         write(outputDir.resolve(ACCOUNTS_OUT), map(posting.accounts().records(), Account::toRecord));
