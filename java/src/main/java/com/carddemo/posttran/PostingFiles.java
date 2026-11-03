@@ -22,11 +22,15 @@ final class PostingFiles {
     static final String ACCOUNTS = "acctdata.txt";
     static final String CATEGORY_BALANCES = "tcatbal.txt";
     static final String DISCLOSURE_GROUPS = "discgrp.txt";
+    static final String CARDS = "carddata.txt";
 
     static final String TRANSACTIONS_OUT = "TRANSACT.txt";
     static final String ACCOUNTS_OUT = "ACCTDATA.txt";
     static final String CATEGORY_BALANCES_OUT = "TCATBALF.txt";
     static final String REJECTS_OUT = "DALYREJS.txt";
+
+    /** KSDSUTIL's line-sequential TEXT-REC length. */
+    private static final int TEXT_RECORD_LENGTH = 500;
 
     private PostingFiles() {
     }
@@ -61,6 +65,31 @@ final class PostingFiles {
     /** A keyed file of raw fixed-length records, keyed on the first {@code keyLength} bytes. */
     static KeyedFile<String> readRecords(Path file, String name, int length, int keyLength) {
         return load(file, name, length, Function.identity(), record -> record.substring(0, keyLength));
+    }
+
+    /**
+     * Records as {@code KSDSUTIL LOAD} stores them (after {@code tr -d '\r'} in the run
+     * script): every CR is dropped, an empty line is a record of spaces, a line over 500 bytes
+     * is split into 500-byte pieces (GnuCOBOL 3.2 line-sequential read), and each piece is cut
+     * or space-padded to {@code length} bytes.
+     */
+    static List<String> readLoadedRecords(Path file, int length) throws IOException {
+        String text = new String(Files.readAllBytes(file), StandardCharsets.ISO_8859_1).replace("\r", "");
+        List<String> lines = new ArrayList<>(List.of(text.split("\n", -1)));
+        if (lines.get(lines.size() - 1).isEmpty()) {
+            lines.remove(lines.size() - 1);
+        }
+        List<String> records = new ArrayList<>();
+        for (String line : lines) {
+            int start = 0;
+            do {
+                String piece = line.substring(start, Math.min(line.length(), start + TEXT_RECORD_LENGTH));
+                records.add(piece.length() >= length ? piece.substring(0, length)
+                        : piece + " ".repeat(length - piece.length()));
+                start += TEXT_RECORD_LENGTH;
+            } while (start < line.length());
+        }
+        return records;
     }
 
     static void writeOutputs(DailyTransactionPosting posting, Path outputDir) {

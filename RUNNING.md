@@ -228,6 +228,41 @@ A missing input file leaves its DD pointing at nothing, so the OPEN fails with s
 - **Nothing is recorded:** unknown cards and missing accounts are only log lines; the return code stays 0, so a scheduler can't tell a clean run from one where every card failed.
 - **No JCL runs the program**: it looks like a development or verification step that CBTRN02C (which does the same checks and writes rejects) replaced.
 
+## Card file listing (CBACT02C)
+
+`app/jcl/READCARD.jcl` (STEP05) runs `CBACT02C`. It reads every card in the card KSDS in card-number order (150-byte records, key = 16-byte card number, copybook `CVACT02Y`) and displays each record exactly as stored. It **writes and updates nothing**: SYSOUT is its only output. It has no PARM and checks no field. It ends with return code 0, or abends with U0999 (exit code 16 locally) if the card file can't be opened, read or closed.
+
+```bash
+./run-cbact02c.sh                                     # INPUT_DIR, WORK_DIR optional
+tests/compare-cbact02c.sh                             # COBOL and Java vs tests/golden/cbact02c
+tests/compare-cbact02c.sh tests/data/cbact02c-edge tests/golden/cbact02c-edge
+tests/compare-cbact02c.sh tests/data/cbact02c-empty tests/golden/cbact02c-empty
+tests/compare-cbact02c.sh tests/data/cbact02c-abend tests/golden/cbact02c-abend 16
+tests/fuzz-cbtrn02c.py 1 200 cbact02c
+tests/cbact02c_data.py edge DIR [full|empty|no-carddata]   # rebuild the edge inputs
+java -cp java/target/cbtrn02c.jar com.carddemo.posttran.Cbact02cMain --input-dir DIR
+```
+
+| DD | Use | JCL format | Local file (`WORK_DIR/data/`) |
+|---|---|---|---|
+| `CARDFILE` | input, read in key order | VSAM KSDS, 150 bytes, key 16 bytes | `CARDDATA.idx`, loaded from `carddata.txt` (CRs dropped) with `KSDSUTIL LOAD CARD` (existing) |
+
+A missing `carddata.txt` leaves `CARDFILE` pointing at nothing, so the OPEN fails with status 35 and the program abends, as it would on the mainframe with no dataset.
+
+**COBOL changes: none.** Platform stand-ins: `gnucobol/CEE3ABD.cbl` (existing) for the abend; `KSDSUTIL LOAD CARD` (existing) for the KSDS. The Java port reads `carddata.txt` the way that load stores it (`PostingFiles.readLoadedRecords`): an empty line is a card of 150 spaces, a line longer than 150 bytes is cut, and a line longer than 500 bytes is split into two cards (GnuCOBOL 3.2 reads long line-sequential records in 500-byte pieces). Keys must ascend: the COBOL load stops with status 21 (out of order) or 22 (duplicate) before the program runs, so those inputs aren't compared; the Java port abends on a duplicate.
+
+**Results on the sample data:** 50 cards listed, 52 SYSOUT lines; return code 0.
+
+**Tests:** the sample baseline; 11 targeted edge-case lines giving 12 cards (`tests/data/cbact02c-edge`: an empty line, active, inactive and blank-status cards, short, CRLF, 210-byte and 21-byte lines, a 531-byte line that loads as two cards, non-numeric account ID/CVV/date, the highest card number); an empty card file; a missing card file (abend, rc 16); and 200 random card files (4,145 cards). All match. JUnit: `CardFileListingBaselineTest`, which also checks that an unreadable card file abends (rc 16, status 37) and the `9910-DISPLAY-IO-STATUS` formatting.
+
+**Mutation check:** listing only active cards (`CARD-ACTIVE-STATUS = 'Y'`) in `CardFileListing.run` still matched the sample data (all 50 sample cards are active), but the edge-case comparison (7 cards missing) and the random card files (seed 1) both failed. Reverted.
+
+**Behaviour kept as in the original (findings, not fixed):**
+- **Card numbers and CVVs go into the job log in clear text.** Each card record is displayed whole, so the full card number, CVV and expiry date land in SYSOUT, which on the mainframe is kept and readable by anyone with access to the job output.
+- **Nothing in the record is checked.** Inactive cards, blank statuses and non-numeric account IDs, CVVs or dates are listed like any other card.
+- **Any non-zero file status stops the job.** OPEN, READ and CLOSE accept only `00` (and `10` for end of file); a warning status such as `04` would abend the step.
+- **Unused code:** `APPL-RESULT` is set to 8 before the OPEN and immediately overwritten; the `9910-DISPLAY-IO-STATUS` branch for non-numeric or `9x` statuses is never reached in these runs (the Java port keeps it, unit-tested).
+
 ## Demo walkthrough
 
 `./demo.sh` runs the CBTRN02C story one step at a time, pausing for Enter between steps (`DEMO_NO_PAUSE=1` runs straight through): the original COBOL (38 rejects), the Java port, the file-by-file comparison against the saved baseline (10 `MATCH` lines), then a deliberate mistake. Step 4 changes one business rule in a throwaway copy of the Java (a transaction exactly at the credit limit is rejected instead of posted) and reruns the comparison twice: on the sample data it still passes (no sample transaction lands exactly on a limit), on the edge cases every Java file `DIFFERS`, and the script names the one transaction that was wrongly rejected (`901 posted exactly at limit`, 400.00). The copy is then deleted; the real Java is never changed. Outputs go to `build/demo/`. It needs the same setup as the Java port above.
