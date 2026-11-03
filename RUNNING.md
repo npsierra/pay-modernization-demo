@@ -228,6 +228,43 @@ A missing input file leaves its DD pointing at nothing, so the OPEN fails with s
 - **Nothing is recorded:** unknown cards and missing accounts are only log lines; the return code stays 0, so a scheduler can't tell a clean run from one where every card failed.
 - **No JCL runs the program**: it looks like a development or verification step that CBTRN02C (which does the same checks and writes rejects) replaced.
 
+## Card file listing (CBACT02C)
+
+`CBACT02C` reads the card master file front to back, in card-number order, and displays every 150-byte card record on SYSOUT between a START and an END message. It **writes and updates nothing**: SYSOUT is its only output, so SYSOUT is what gets compared (trailing spaces ignored, no timestamps). `run-cbact02c.sh` mirrors `app/jcl/READCARD.jcl` STEP05. There is no PARM. Return code 0 on a normal end (an empty card file included), or abend U0999 (exit code 16 locally) if the card file can't be opened, read or closed.
+
+```bash
+./run-cbact02c.sh                                     # INPUT_DIR, WORK_DIR optional
+tests/compare-cbact02c.sh                             # COBOL and Java vs tests/golden/cbact02c
+tests/compare-cbact02c.sh tests/data/cbact02c-edge tests/golden/cbact02c-edge
+tests/compare-cbact02c.sh tests/data/cbact02c-empty tests/golden/cbact02c-empty
+tests/compare-cbact02c.sh tests/data/cbact02c-abend tests/golden/cbact02c-abend 16
+tests/fuzz-cbtrn02c.py 1 200 cbact02c
+tests/cbact02c_data.py edge DIR [full|empty]          # rebuild the edge inputs
+java -cp java/target/cbtrn02c.jar com.carddemo.posttran.Cbact02cMain --input-dir app/data/ASCII
+```
+
+| DD | Use | Format | Local file (`WORK_DIR/data/`) |
+|---|---|---|---|
+| `CARDFILE` | input, read in key order | KSDS, 150 bytes, key 16 (card number) | `CARDDATA.idx` from `carddata.txt`, `KSDSUTIL LOAD CARD` |
+
+A missing `carddata.txt` leaves `CARDFILE` pointing at nothing, so the OPEN fails with status 35 and the program abends. A card file without read permission fails the OPEN with status 30 (covered by a JUnit test).
+
+**COBOL changes: none.** Platform stand-ins: `gnucobol/CEE3ABD.cbl` (existing) for the abend and `KSDSUTIL LOAD CARD` (from CBTRN01C) for the IDCAMS load. Nothing new was needed.
+
+**Results on the sample data:** 50 cards listed, 52 SYSOUT lines, return code 0.
+
+**Java:** `CardFileListing` holds the read loop and `1000-CARDFILE-GET-NEXT`. `Cbact02cMain` does `0000-CARDFILE-OPEN` (status 35 or 30, then abend) and returns 0 or 16. Each record is printed exactly as stored, all 150 bytes.
+
+**Tests:** the sample baseline; 13 targeted edge cases (`tests/data/cbact02c-edge`: lowest and highest card numbers, a letter in the card number, the largest account ID and CVV, zero account ID and CVV, an inactive card, a short line, a CRLF line, filler used to the last byte, overpunch signs and letters in the numeric fields, a blank name, date and status, punctuation); an empty card file; a missing card file (abend, rc 16); and 200 random card files (5,831 cards). All match. JUnit: `CardFileListingBaselineTest`, including an unreadable card file and a record longer than 150 bytes (both rc 16, no stack trace).
+
+**Mutation check:** I changed `CardFileListing.run` to print only the first 91 bytes of each record, dropping the 59-byte filler. The sample comparison still passed, because every sample filler is blank. The edge cases (`DIFFERS` on the card whose filler is used to the last byte) and the random files (seed 1) both failed. Change reverted.
+
+**Behaviour kept as in the original (findings, not fixed):**
+- **Full card details go to the job log.** Every record is printed in full, including the CVV (columns 28-30), the cardholder name and the expiry date, so anyone who can read the job output can read every card's security code.
+- **No checks at all.** The program doesn't validate any field, so letters in the account ID or CVV, blank names and impossible dates are printed as they are. It reports no count of cards read, and the return code is 0 whether there are 50 cards or none.
+- **Read and close errors can't be reproduced off-mainframe.** `1000-CARDFILE-GET-NEXT` and `9000-CARDFILE-CLOSE` abend on any status other than 00 or 10, but no GnuCOBOL input reaches those branches once the OPEN succeeds. They are ported but not tested.
+- **The listing is in card-number order, not file order.** This is how a KSDS works. The load (as with IDCAMS REPRO into a KSDS) needs the input sorted, and an out-of-order or duplicate card number, or a blank line, stops the load (status 21) before CBACT02C runs.
+
 ## Demo walkthrough
 
 `./demo.sh` runs the CBTRN02C story one step at a time, pausing for Enter between steps (`DEMO_NO_PAUSE=1` runs straight through): the original COBOL (38 rejects), the Java port, the file-by-file comparison against the saved baseline (10 `MATCH` lines), then a deliberate mistake. Step 4 changes one business rule in a throwaway copy of the Java (a transaction exactly at the credit limit is rejected instead of posted) and reruns the comparison twice: on the sample data it still passes (no sample transaction lands exactly on a limit), on the edge cases every Java file `DIFFERS`, and the script names the one transaction that was wrongly rejected (`901 posted exactly at limit`, 400.00). The copy is then deleted; the real Java is never changed. Outputs go to `build/demo/`. It needs the same setup as the Java port above.

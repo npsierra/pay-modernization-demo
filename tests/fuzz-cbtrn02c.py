@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """Differential test: builds random CBTRN02C batches (tests/cbtrn02c_data.py), runs the
 original COBOL (run-cbtrn02c.sh) and the Java port on each, and fails on the first output
-that differs. Usage: fuzz-cbtrn02c.py [FIRST_SEED] [COUNT] [cbtrn02c|cbact04c|cbact01c|cbtrn01c].
+that differs. Usage: fuzz-cbtrn02c.py [FIRST_SEED] [COUNT] [cbtrn02c|cbact04c|cbact01c|cbtrn01c|cbact02c].
 cbact04c runs the interest calculation (run-cbact04c.sh vs IntcalcMain) on random
 category balances instead; cbact01c the account extract (run-cbact01c.sh vs Cbact01cMain)
 on random account files, comparing its binary outputs byte for byte; cbtrn01c the daily
-transaction verification (run-cbtrn01c.sh vs Cbtrn01cMain, tests/cbtrn01c_data.py), SYSOUT only.
+transaction verification (run-cbtrn01c.sh vs Cbtrn01cMain, tests/cbtrn01c_data.py), SYSOUT only;
+cbact02c the card file listing (run-cbact02c.sh vs Cbact02cMain, tests/cbact02c_data.py), SYSOUT only.
 Needs java/target/cbtrn02c.jar.
 """
 import os
@@ -19,6 +20,7 @@ JAR = ROOT / "java/target/cbtrn02c.jar"
 OUT = ROOT / "build/cbtrn02c-fuzz"
 sys.dont_write_bytecode = True
 sys.path.insert(0, str(ROOT / "tests"))
+import cbact02c_data  # noqa: E402
 import cbtrn01c_data  # noqa: E402
 import cbtrn02c_data  # noqa: E402
 
@@ -150,6 +152,32 @@ def run_verify_seed(seed):
     return problems, len(files["dailytran.txt"])
 
 
+def run_listing_seed(seed):
+    case = OUT / f"cbact02c-seed-{seed}"
+    shutil.rmtree(case, ignore_errors=True)
+    data, cobol, java = case / "input", case / "cobol", case / "java"
+    cards = cbact02c_data.random_batch(seed)
+    cbact02c_data.write(data, cards)
+    cobol_rc = subprocess.run([str(ROOT / "run-cbact02c.sh")], env={**os.environ, "INPUT_DIR": str(data),
+                              "WORK_DIR": str(cobol)}, stdout=subprocess.DEVNULL,
+                              stderr=subprocess.DEVNULL).returncode
+    java.mkdir(parents=True)
+    with open(java / "sysout.txt", "w") as sysout:
+        java_rc = subprocess.run(["java", "-cp", str(JAR), "com.carddemo.posttran.Cbact02cMain", "--input-dir",
+                                  str(data)], stdout=sysout, stderr=subprocess.DEVNULL).returncode
+    problems = []
+    if cobol_rc != java_rc:
+        problems.append(f"return code COBOL {cobol_rc} vs Java {java_rc}")
+    if cobol_rc != 0:
+        problems.append(f"COBOL failed with return code {cobol_rc}")
+    if not problems and normalize(cobol / "sysout.txt", False) != normalize(java / "sysout.txt", False):
+        problems.append(f"sysout differs ({cobol / 'sysout.txt'} vs {java / 'sysout.txt'})")
+    if problems:
+        return problems, 0
+    shutil.rmtree(case)
+    return problems, len(cards)
+
+
 def run_seed(seed):
     case = OUT / f"seed-{seed}"
     shutil.rmtree(case, ignore_errors=True)
@@ -185,7 +213,8 @@ def main():
     job = sys.argv[3] if len(sys.argv) > 3 else "cbtrn02c"
     jobs = {"cbtrn02c": (run_seed, "rejects"), "cbact04c": (run_intcalc_seed, "interest transactions"),
             "cbact01c": (run_extract_seed, "accounts extracted"),
-            "cbtrn01c": (run_verify_seed, "transactions verified")}
+            "cbtrn01c": (run_verify_seed, "transactions verified"),
+            "cbact02c": (run_listing_seed, "cards listed")}
     if job not in jobs:
         sys.exit(__doc__)
     run, noun = jobs[job]
