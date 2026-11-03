@@ -224,7 +224,6 @@
                IF PASSWDI  OF COUSR2AI NOT = SPACES AND LOW-VALUES
                    MOVE PASSWDI  OF COUSR2AI TO SEC-USR-PWD
                    SET USR-MODIFIED-YES TO TRUE
-                   MOVE SPACES   TO PASSWDI  OF COUSR2AI
                END-IF
                IF USRTYPEI  OF COUSR2AI NOT = SEC-USR-TYPE
                    MOVE USRTYPEI OF COUSR2AI TO SEC-USR-TYPE
@@ -366,6 +365,7 @@
            EVALUATE WS-RESP-CD
                WHEN DFHRESP(NORMAL)
                    MOVE SPACES             TO WS-MESSAGE
+                                              PASSWDI  OF COUSR2AI
                    MOVE DFHGREEN           TO ERRMSGC  OF COUSR2AO
                    STRING 'User '     DELIMITED BY SIZE
                           SEC-USR-ID  DELIMITED BY SPACE
