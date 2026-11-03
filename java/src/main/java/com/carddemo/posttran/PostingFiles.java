@@ -63,6 +63,19 @@ final class PostingFiles {
         return load(file, name, length, Function.identity(), record -> record.substring(0, keyLength));
     }
 
+    /**
+     * Like {@link #readRecords}, but a line longer than the record length is cut to it instead of
+     * abending, as {@code KSDSUTIL LOAD} does when it builds the KSDS.
+     */
+    static KeyedFile<String> readTruncatedRecords(Path file, String name, int length, int keyLength) {
+        KeyedFile<String> keyed = new KeyedFile<>(name, record -> record.substring(0, keyLength));
+        for (String line : lines(file)) {
+            String record = line.length() > length ? line.substring(0, length) : line;
+            keyed.write(String.format("%-" + length + "s", record));
+        }
+        return keyed;
+    }
+
     static void writeOutputs(DailyTransactionPosting posting, Path outputDir) {
         write(outputDir.resolve(TRANSACTIONS_OUT), posting.transactionRecords());
         write(outputDir.resolve(ACCOUNTS_OUT), map(posting.accounts().records(), Account::toRecord));

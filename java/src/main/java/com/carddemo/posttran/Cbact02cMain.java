@@ -8,7 +8,8 @@ import java.nio.file.Path;
  * {@code java -cp cbtrn02c.jar com.carddemo.posttran.Cbact02cMain --input-dir DIR}.
  * Reads carddata.txt from DIR and writes only SYSOUT. Exit codes match the COBOL step:
  * 0 normal end (an empty card file included), 16 abend (U0999): no card file (OPEN status 35),
- * a card file that cannot be read (OPEN status 30) or a malformed one.
+ * a card file that cannot be read (OPEN status 30) or a malformed one. Lines longer than 150
+ * bytes are cut to 150, as the KSDS load does.
  */
 public final class Cbact02cMain {
     static final String CARDS = "carddata.txt";
@@ -35,7 +36,7 @@ public final class Cbact02cMain {
             if (!Files.isReadable(cardFile)) {
                 return openFailed("30");
             }
-            KeyedFile<String> cards = PostingFiles.readRecords(cardFile, "CARDFILE", CardFileListing.RECORD_LENGTH,
+            KeyedFile<String> cards = PostingFiles.readTruncatedRecords(cardFile, "CARDFILE", CardFileListing.RECORD_LENGTH,
                     CardFileListing.KEY_LENGTH);
             new CardFileListing(System.out::println).run(cards.records());
             // 9000-CARDFILE-CLOSE: nothing to release once the records are in memory.

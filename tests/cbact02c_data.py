@@ -35,6 +35,7 @@ def edge():
         card("4000000000000007", name="", expiry=" " * 10, active=" "),          # blank name, date, status
         card("4000000000000008", name="!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~ punctuation"),
         card("4000000000000009", "00000000000", "000", "Zero account ID and CVV", "1999-01-01"),
+        card("4000000000000010", name="Longer than 150 bytes, cut on load") + "EXTRA BYTES",
         card("400000000000001A", name="Letter in card number"),
         card("9999999999999999", "99999999999", "999", "Highest card number, last record"),
     ]

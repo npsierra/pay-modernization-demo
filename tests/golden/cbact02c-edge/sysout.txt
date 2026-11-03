@@ -10,6 +10,7 @@ START OF EXECUTION OF PROGRAM CBACT02C
 400000000000000700000000001123                                                                                                                        
 400000000000000800000000001123!"#$%&'()*+,-./:;<=>?@[\]^_`{|}~ punctuation      2030-12-31Y                                                           
 400000000000000900000000000000Zero account ID and CVV                           1999-01-01Y                                                           
+400000000000001000000000001123Longer than 150 bytes, cut on load                2030-12-31Y                                                           
 400000000000001A00000000001123Letter in card number                             2030-12-31Y                                                           
 999999999999999999999999999999Highest card number, last record                  2030-12-31Y                                                           
 END OF EXECUTION OF PROGRAM CBACT02C

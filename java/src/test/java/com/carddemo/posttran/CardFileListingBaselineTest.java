@@ -46,14 +46,14 @@ class CardFileListingBaselineTest {
                 "FILE STATUS IS: NNNN0030", "ABENDING PROGRAM")), normalize(sysout.toString().lines().toList()));
     }
 
-    /** A record longer than 150 bytes cannot be loaded into the KSDS: abend, not a stack trace. */
+    /** KSDSUTIL LOAD cuts a line longer than 150 bytes to 150, so the card is listed, not an abend. */
     @Test
-    void overlongRecordAbends(@TempDir Path dir) throws IOException {
-        Files.writeString(dir.resolve(Cbact02cMain.CARDS), "4".repeat(151) + "\n", StandardCharsets.US_ASCII);
+    void overlongRecordIsCut(@TempDir Path dir) throws IOException {
+        Files.writeString(dir.resolve(Cbact02cMain.CARDS), "4".repeat(150) + "EXTRA\n", StandardCharsets.US_ASCII);
         StringBuilder sysout = new StringBuilder();
-        assertEquals(16, run(dir, sysout));
-        List<String> lines = sysout.toString().lines().toList();
-        assertEquals("ABENDING PROGRAM", lines.get(lines.size() - 1));
+        assertEquals(0, run(dir, sysout));
+        assertEquals(List.of("START OF EXECUTION OF PROGRAM CBACT02C", "4".repeat(150),
+                "END OF EXECUTION OF PROGRAM CBACT02C"), sysout.toString().lines().toList());
     }
 
     private static int run(Path inputDir, StringBuilder sysout) {
