@@ -1,0 +1,50 @@
+START OF EXECUTION OF PROGRAM CBTRN01C
+0000000000000001010001POS TERM  card and account found                                                                              0000000100{800000000Test Merchant                                     Testville                                         12345     40000000000000012026-01-10 10:00:00.000000                                              
+SUCCESSFUL READ OF XREF
+CARD NUMBER: 4000000000000001
+ACCOUNT ID : 00000000901
+CUSTOMER ID: 000000001
+SUCCESSFUL READ OF ACCOUNT FILE
+0000000000000002030001POS TERM  second card, account found                                                                          0000000050}800000000Test Merchant                                     Testville                                         12345     40000000000000022026-01-10 10:00:00.000000                                              
+SUCCESSFUL READ OF XREF
+CARD NUMBER: 4000000000000002
+ACCOUNT ID : 00000000902
+CUSTOMER ID: 000000002
+SUCCESSFUL READ OF ACCOUNT FILE
+0000000000000003010001POS TERM  card found, ACCOUNT 00000000999 NOT FOUND                                                           0000000010{800000000Test Merchant                                     Testville                                         12345     40000000000000032026-01-10 10:00:00.000000                                              
+SUCCESSFUL READ OF XREF
+CARD NUMBER: 4000000000000003
+ACCOUNT ID : 00000000999
+CUSTOMER ID: 000000003
+INVALID ACCOUNT NUMBER FOUND
+ACCOUNT 00000000999 NOT FOUND
+0000000000000004010001POS TERM  unknown card: COULD NOT BE VERIFIED                                                                 0000000010{800000000Test Merchant                                     Testville                                         12345     40000000000000992026-01-10 10:00:00.000000                                              
+INVALID CARD NUMBER FOR XREF
+CARD NUMBER 4000000000000099 COULD NOT BE VERIFIED. SKIPPING TRANSACTION ID-0000000000000004
+0000000000000005010001POS TERM  blank card number: not verified                                                                     0000000010{800000000Test Merchant                                     Testville                                         12345                     2026-01-10 10:00:00.000000                                              
+INVALID CARD NUMBER FOR XREF
+CARD NUMBER                  COULD NOT BE VERIFIED. SKIPPING TRANSACTION ID-0000000000000005
+0000000000000006010001POS TERM  short xref line, largest account ID                                                                 0000000000{800000000Test Merchant                                     Testville                                         12345     40000000000000042026-01-10 10:00:00.000000                                              
+SUCCESSFUL READ OF XREF
+CARD NUMBER: 4000000000000004
+ACCOUNT ID : 99999999999
+CUSTOMER ID: 000000004
+SUCCESSFUL READ OF ACCOUNT FILE
+0000000000000007010001POS TERM  CRLF xref line, largest amount                                                                      9999999999I800000000Test Merchant                                     Testville                                         12345     40000000000000052026-01-10 10:00:00.000000                                              
+SUCCESSFUL READ OF XREF
+CARD NUMBER: 4000000000000005
+ACCOUNT ID : 00000000905
+CUSTOMER ID: 000000005
+SUCCESSFUL READ OF ACCOUNT FILE
+0000000000000008010001POS TERM  same card again                                                                                     0000000010{800000000Test Merchant                                     Testville                                         12345     40000000000000012026-01-10 10:00:00.000000                                              
+SUCCESSFUL READ OF XREF
+CARD NUMBER: 4000000000000001
+ACCOUNT ID : 00000000901
+CUSTOMER ID: 000000001
+SUCCESSFUL READ OF ACCOUNT FILE
+0000000000000009010001POS TERM  last record, unknown card                                                                           0000000010{800000000Test Merchant                                     Testville                                         12345     40000000000000982026-01-10 10:00:00.000000                                              
+INVALID CARD NUMBER FOR XREF
+CARD NUMBER 4000000000000098 COULD NOT BE VERIFIED. SKIPPING TRANSACTION ID-0000000000000009
+INVALID CARD NUMBER FOR XREF
+CARD NUMBER 4000000000000098 COULD NOT BE VERIFIED. SKIPPING TRANSACTION ID-0000000000000009
+END OF EXECUTION OF PROGRAM CBTRN01C

@@ -9,7 +9,7 @@ For each CardDemo batch program:
 3. Port the program to Java 17.
 4. Prove the COBOL and Java produce identical files on the sample data, targeted edge cases and 200 random batches. A GitHub check repeats this on every pull request.
 
-Programs done so far: CBTRN02C (daily transaction posting), CBACT04C (interest calculation) and CBACT01C (account file extract). Details, results and findings for each are in [RUNNING.md](RUNNING.md).
+Programs done so far: CBTRN02C (daily transaction posting), CBACT04C (interest calculation), CBACT01C (account file extract) and CBTRN01C (daily transaction verification). Details, results and findings for each are in [RUNNING.md](RUNNING.md).
 
 ## Get the code
 

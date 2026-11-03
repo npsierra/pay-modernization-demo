@@ -74,6 +74,17 @@ jobs:
       - name: CBACT01C random account files, COBOL vs Java
         run: tests/fuzz-cbtrn02c.py 1 200 cbact01c
 
+      - name: CBTRN01C (transaction verification), COBOL and Java vs baseline
+        run: |
+          tests/compare-cbtrn01c.sh
+          tests/compare-cbtrn01c.sh tests/data/cbtrn01c-edge tests/golden/cbtrn01c-edge
+          tests/compare-cbtrn01c.sh tests/data/cbtrn01c-empty tests/golden/cbtrn01c-empty
+          tests/compare-cbtrn01c.sh tests/data/cbtrn01c-abend tests/golden/cbtrn01c-abend 16
+          tests/compare-cbtrn01c.sh tests/data/cbtrn01c-no-custdata tests/golden/cbtrn01c-no-custdata 16
+
+      - name: CBTRN01C random batches, COBOL vs Java
+        run: tests/fuzz-cbtrn02c.py 1 200 cbtrn01c
+
       - name: Keep outputs for inspection
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -83,5 +94,6 @@ jobs:
             build/cbtrn02c-compare/
             build/cbact04c-compare/
             build/cbact01c-compare/
+            build/cbtrn01c-compare/
             build/cbtrn02c-fuzz/
           if-no-files-found: ignore
