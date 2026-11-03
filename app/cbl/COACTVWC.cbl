@@ -165,6 +165,8 @@
           05 LIT-CARDUPDATEMAP                           PIC X(7)               
                                                    VALUE 'CCRDUPA'.             
                                                                                 
+          05 LIT-SIGNONPGM                         PIC X(8)                     
+                                                   VALUE 'COSGN00C'.            
           05 LIT-MENUPGM                           PIC X(8)                     
                                                    VALUE 'COMEN01C'.            
           05 LIT-MENUTRANID                        PIC X(4)                     
@@ -279,14 +281,30 @@
       *****************************************************************         
       * Store passed data if  any                *                              
       *****************************************************************         
-           IF EIBCALEN IS EQUAL TO 0                                            
+           IF EIBCALEN IS LESS THAN LENGTH OF CARDDEMO-COMMAREA                 
+              PERFORM 0002-RETURN-TO-SIGNON                                     
+                 THRU 0002-RETURN-TO-SIGNON-EXIT                                
+           END-IF                                                               
+           MOVE DFHCOMMAREA (1:LENGTH OF CARDDEMO-COMMAREA)  TO                 
+                             CARDDEMO-COMMAREA                                  
+           IF CDEMO-USER-ID EQUAL LOW-VALUES                                    
+           OR CDEMO-USER-ID EQUAL SPACES                                        
+           OR NOT (CDEMO-USRTYP-ADMIN OR CDEMO-USRTYP-USER)                     
+              PERFORM 0002-RETURN-TO-SIGNON                                     
+                 THRU 0002-RETURN-TO-SIGNON-EXIT                                
+           END-IF                                                               
+                                                                                
+           IF EIBCALEN IS LESS THAN LENGTH OF CARDDEMO-COMMAREA                 
+                                  + LENGTH OF WS-THIS-PROGCOMMAREA              
                OR (CDEMO-FROM-PROGRAM = LIT-MENUPGM                             
                AND NOT CDEMO-PGM-REENTER)                                       
-              INITIALIZE CARDDEMO-COMMAREA                                      
+              INITIALIZE CDEMO-CUSTOMER-INFO                                    
+                         CDEMO-ACCOUNT-INFO                                     
+                         CDEMO-CARD-INFO                                        
+                         CDEMO-MORE-INFO                                        
                          WS-THIS-PROGCOMMAREA                                   
+              SET CDEMO-PGM-ENTER TO TRUE                                       
            ELSE                                                                 
-              MOVE DFHCOMMAREA (1:LENGTH OF CARDDEMO-COMMAREA)  TO              
-                                CARDDEMO-COMMAREA                               
               MOVE DFHCOMMAREA(LENGTH OF CARDDEMO-COMMAREA + 1:                 
                                LENGTH OF WS-THIS-PROGCOMMAREA ) TO              
                                 WS-THIS-PROGCOMMAREA                            
@@ -341,7 +359,6 @@
                    MOVE LIT-THISTRANID     TO CDEMO-FROM-TRANID                 
                    MOVE LIT-THISPGM        TO CDEMO-FROM-PROGRAM                
                                                                                 
-                   SET  CDEMO-USRTYP-USER  TO TRUE                              
                    SET  CDEMO-PGM-ENTER    TO TRUE                              
                    MOVE LIT-THISMAPSET     TO CDEMO-LAST-MAPSET                 
                    MOVE LIT-THISMAP        TO CDEMO-LAST-MAP                    
@@ -412,6 +429,15 @@
            EXIT                                                                 
            .                                                                    
                                                                                 
+                                                                                
+       0002-RETURN-TO-SIGNON.                                                   
+           EXEC CICS XCTL                                                       
+                PROGRAM (LIT-SIGNONPGM)                                         
+           END-EXEC                                                             
+           .                                                                    
+       0002-RETURN-TO-SIGNON-EXIT.                                              
+           EXIT                                                                 
+           .                                                                    
                                                                                 
        1000-SEND-MAP.                                                           
            PERFORM 1100-SCREEN-INIT                                             
