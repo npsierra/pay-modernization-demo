@@ -46,10 +46,11 @@ public final class Cbact02cMain {
 
     /**
      * CARDFILE after the KSDS load: records in key order (a duplicate key abends, as the load
-     * fails with status 22). A missing file opens with status 35, an unreadable one with 37.
+     * fails with status 22). A missing file (or anything but a regular file, which the runner does not load) opens
+     * with status 35, an unreadable one with 37.
      */
     private static CardFileListing.CardFile open(Path file) {
-        if (!Files.exists(file)) {
+        if (!Files.isRegularFile(file)) {
             return new CardFileListing.CardFile(NOT_FOUND, List.of());
         }
         List<String> records;

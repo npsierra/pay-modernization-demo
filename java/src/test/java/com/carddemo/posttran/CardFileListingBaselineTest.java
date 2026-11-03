@@ -49,6 +49,16 @@ class CardFileListingBaselineTest {
     }
 
     @Test
+    void treatsADirectoryAsAMissingCardFile(@TempDir Path dir) throws IOException {
+        Files.createDirectory(dir.resolve(PostingFiles.CARDS));
+        ByteArrayOutputStream sysout = new ByteArrayOutputStream();
+        assertEquals(Main.ABEND, run(dir, sysout));
+        Path goldenSysout = ROOT.resolve("tests/golden/cbact02c-abend/sysout.txt");
+        assertEquals(normalize(Files.readAllLines(goldenSysout, StandardCharsets.ISO_8859_1)),
+                normalize(sysout.toString(StandardCharsets.ISO_8859_1).lines().toList()));
+    }
+
+    @Test
     void formatsFileStatusLikeTheCobol() {
         assertEquals("0035", CardFileListing.ioStatus04("35"));
         assertEquals("0010", CardFileListing.ioStatus04("10"));
