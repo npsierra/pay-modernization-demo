@@ -57,14 +57,14 @@ spin() { # spin <label> <log file> <command ...>: run the command, spinner while
 
 paint() { # space out the comparison script's output and colour its verdicts
   awk '/^== Input/ { print; print ""; next }
-       /^== Java/  { print ""; print; next }
+       /^== (Changed )?Java/ { print ""; print; next }
        /^RESULT/   { print ""; sub(/ \(TRANSACTIONS/, "\n(TRANSACTIONS"); print; next }
        { print }' |
   sed -e "s/sysout.txt (/sysout.txt   (/" \
       -e "s/^  MATCH /  ${GREEN}MATCH${RESET} /" \
       -e "s/^  DIFFERS /  ${RED}DIFFERS${RESET} /" \
       -e "s/^  FAIL /  ${RED}FAIL${RESET} /" \
-      -e "s/^RESULT: COBOL and Java both match/${GREEN}${BOLD}RESULT: COBOL and Java both match${RESET}/" \
+      -e "s/^\(RESULT: COBOL and .*both match.*\)/${GREEN}${BOLD}\1${RESET}/" \
       -e "s/^RESULT: outputs differ/${RED}${BOLD}RESULT: outputs differ${RESET}/"
 }
 
@@ -124,10 +124,13 @@ for pat in '[}J-R]$' '[{A-I]$'; do
   printf '  %-13s %-10s (%s)\n' "$a" "$(echo "$a" | signed)" "$(echo "$a" | explain_sign)"
 done
 say "Read the sign the wrong way and 299 of 300 are rejected." \
+    "Nothing crashes, but it silently misreads every amount." \
     "Same program, same data."
 
 step "2. The Java port, same input" \
-  "Program:   the Java 17 port in java/, written one COBOL paragraph at a time" \
+  "Program:   the Java 17 port in java/," \
+  "           structured to mirror the COBOL paragraph by paragraph," \
+  "           so it can be checked side by side" \
   "Watch for: the same counts and the same 38 rejects"
 JAVA_RC=0
 spin "Running Java CBTRN02C    in: app/data/ASCII   out: build/demo/java" "$OUT/java.sysout.txt" \
@@ -170,16 +173,19 @@ RULE="$BROKEN/src/main/java/com/carddemo/posttran/TransactionValidator.java"
 sed -i.orig 's/creditLimit().compareTo(projected) < 0/creditLimit().compareTo(projected) <= 0/' "$RULE"
 if cmp -s "$RULE" "$RULE.orig"; then echo "could not apply the step 4 rule change"; exit 1; fi
 printf ' The change (< becomes <=):\n\n'
-diff "$RULE.orig" "$RULE" | sed "s/^</  ${GREEN}</; s/^>/  ${RED}>/; s/\$/${RESET}/; /^[0-9]/d" || true
+printf '  %sBefore: %s%s\n' "$GREEN" "$(grep -m1 'compareTo(projected) <' "$RULE.orig" | sed 's/^ *//')" "$RESET"
+printf '  %sAfter:  %s%s\n' "$RED" "$(grep -m1 'compareTo(projected) <' "$RULE" | sed 's/^ *//')" "$RESET"
 echo
-spin "Compiling the changed copy   out: build/demo/java-broken" "$OUT/build-broken.log" build "$BROKEN"
+spin "Compiling the changed Java   out: build/demo/java-broken" "$OUT/build-broken.log" build "$BROKEN"
 SAMPLE_RC=0
 CBTRN02C_JAR="$BROKEN/target/cbtrn02c.jar" \
-  spin "Running the changed copy     in: app/data/ASCII   vs: tests/golden/cbtrn02c" "$OUT/broken-sample.log" \
+  spin "Running the changed Java     in: app/data/ASCII   vs: tests/golden/cbtrn02c" "$OUT/broken-sample.log" \
   "$ROOT/tests/compare-cbtrn02c.sh" || SAMPLE_RC=$?
-grep -E '^RESULT' "$OUT/broken-sample.log" | sed 's/ (details above.*//' | paint | sed 's/^./ &/'
+grep -E '^RESULT' "$OUT/broken-sample.log" |
+  sed -e 's/ (details above.*//' -e 's/^RESULT: COBOL and Java both match [^ ]*/RESULT: COBOL and the changed Java both match the baseline/' |
+  paint | sed 's/^./ &/'
 if [ "$SAMPLE_RC" -eq 0 ]; then
-  say "The changed copy passes." \
+  say "The changed Java passes." \
       "No sample transaction lands exactly on a limit," \
       "so the sample data cannot tell the two programs apart."
   printf ' %sSample data alone would have let this mistake through.%s\n\n' "$YELLOW$BOLD" "$RESET"
@@ -198,30 +204,29 @@ step "5. The same mistake, tested against the targeted edge cases" \
   "Folder:    tests/data/cbtrn02c-edge" \
   "Watch for: the one transaction the two programs disagree on"
 printf '  %s posted\n  %s rejected:\n%s\n\n' "$((EDGE_N - EDGE_R))" "$EDGE_R" "$reasons"
-printf ' Including: %s901 posted exactly at limit%s  <- the boundary the mistake sits on\n' "$YELLOW$BOLD" "$RESET"
+printf ' Including: %sacct 901: purchase exactly at the limit%s  <- where the mistake sits\n' "$YELLOW$BOLD" "$RESET"
 echo
 BROKEN_RC=0
 CBTRN02C_JAR="$BROKEN/target/cbtrn02c.jar" \
-  spin "Running COBOL and the changed copy   in: tests/data/cbtrn02c-edge" "$OUT/broken-compare.log" \
+  spin "Running COBOL and the changed Java   in: tests/data/cbtrn02c-edge" "$OUT/broken-compare.log" \
   "$ROOT/tests/compare-cbtrn02c.sh" "$ROOT/tests/data/cbtrn02c-edge" "$ROOT/tests/golden/cbtrn02c-edge" || BROKEN_RC=$?
 echo
-awk '/^== COBOL/ { c = 1; next }
-     /^== Java/  { c = 0; printf "  %s    COBOL: %d of %d files match the baseline\n", (m == t) ? "MATCH" : "DIFFERS", m, t; next }
-     c && /^  (MATCH|DIFFERS) / { t++; if ($1 == "MATCH") m++; next }
-     /^  (MATCH|DIFFERS) |^RESULT/' "$OUT/broken-compare.log" | sed 's/ (details above.*//' | paint
+grep -E '^== |^  (MATCH|DIFFERS) |^RESULT' "$OUT/broken-compare.log" |
+  sed -e 's/ (details above.*//' -e 's/^== Java ==/== Changed Java ==/' | paint
 if [ "$BROKEN_RC" -eq 0 ]; then echo " Not caught -- the comparison should have failed"; exit 1; fi
 echo
 printf ' %sThe edge cases caught it.%s\n' "$GREEN$BOLD" "$RESET"
 NORM="$ROOT/build/cbtrn02c-compare/cbtrn02c-edge/normalized"
-say "The one transaction the changed copy rejects and the COBOL posts:"
+say "The one transaction the changed Java rejects and the COBOL posts:"
 { diff "$NORM/expected-DALYREJS.txt" "$NORM/java-DALYREJS.txt" || true; } | grep '^>' | while IFS= read -r line; do
   rec="${line#> }"
   printf '  %sid %s  amount %s  "%s"\n  -> %s%s\n' "$YELLOW$BOLD" "${rec:0:16}" "$(echo "${rec:132:11}" | signed)" \
-    "$(echo "${rec:32:100}" | sed 's/ *$//')" "$(echo "${rec:350:80}" | sed 's/ *$//')" "$RESET"
+    "$(echo "${rec:32:100}" | sed -e 's/ *$//' -e 's/^901 posted exactly at limit$/acct 901: purchase exactly at the limit/')" \
+    "$(echo "${rec:350:80}" | sed 's/ *$//')" "$RESET"
 done
 rm -rf "$BROKEN"
 say "The account had 400.00 of credit left; the purchase was 400.00." \
-    "The COBOL posts it, the changed copy rejects it." \
+    "The COBOL posts it, the changed Java rejects it." \
     "" \
     "A one-character change the sample data could not see," \
     "found by one targeted transaction." \
