@@ -222,6 +222,8 @@
 022200                                             VALUE 'COTRTLI'.     02220000
 022300    05 LIT-LISTTMAP                           PIC X(7)            02230000
 022400                                             VALUE 'CTRTLIA'.     02240000
+          05 LIT-SIGNONPGM                          PIC X(8)
+                                                   VALUE 'COSGN00C'.
 022500                                                                  02250000
 022600                                                                  02260000
 022700******************************************************************02270000
@@ -363,22 +365,31 @@
 036300***************************************************************** 03630000
 036400* Store passed data if  any                *                      03640000
 036500***************************************************************** 03650000
-036600     IF EIBCALEN IS EQUAL TO 0                                    03660000
-036700         OR (CDEMO-FROM-PROGRAM = LIT-ADMINPGM                    03670000
-036800         AND NOT CDEMO-PGM-REENTER)                               03680000
-036900         OR (CDEMO-FROM-PROGRAM = LIT-LISTTPGM                    03690000
-037000         AND NOT CDEMO-PGM-REENTER)                               03700000
-037100        INITIALIZE CARDDEMO-COMMAREA                              03710000
-037200                   WS-THIS-PROGCOMMAREA                           03720000
-037300        SET CDEMO-PGM-ENTER TO TRUE                               03730000
-037400        SET TTUP-DETAILS-NOT-FETCHED TO TRUE                      03740000
-037500     ELSE                                                         03750000
-037600        MOVE DFHCOMMAREA (1:LENGTH OF CARDDEMO-COMMAREA)  TO      03760000
-037700                          CARDDEMO-COMMAREA                       03770000
-037800        MOVE DFHCOMMAREA(LENGTH OF CARDDEMO-COMMAREA + 1:         03780000
-037900                         LENGTH OF WS-THIS-PROGCOMMAREA ) TO      03790000
-038000                          WS-THIS-PROGCOMMAREA                    03800000
-038100     END-IF                                                       03810000
+           IF EIBCALEN IS LESS THAN LENGTH OF CARDDEMO-COMMAREA
+              PERFORM 0002-RETURN-TO-SIGNON
+                 THRU 0002-RETURN-TO-SIGNON-EXIT
+           END-IF
+           MOVE DFHCOMMAREA (1:LENGTH OF CARDDEMO-COMMAREA)  TO
+                             CARDDEMO-COMMAREA
+           IF NOT CDEMO-USRTYP-ADMIN
+              PERFORM 0002-RETURN-TO-SIGNON
+                 THRU 0002-RETURN-TO-SIGNON-EXIT
+           END-IF
+
+           IF EIBCALEN IS LESS THAN LENGTH OF CARDDEMO-COMMAREA
+                                  + LENGTH OF WS-THIS-PROGCOMMAREA
+               OR (CDEMO-FROM-PROGRAM = LIT-ADMINPGM
+               AND NOT CDEMO-PGM-REENTER)
+               OR (CDEMO-FROM-PROGRAM = LIT-LISTTPGM
+               AND NOT CDEMO-PGM-REENTER)
+              INITIALIZE WS-THIS-PROGCOMMAREA
+              SET CDEMO-PGM-ENTER TO TRUE
+              SET TTUP-DETAILS-NOT-FETCHED TO TRUE
+           ELSE
+              MOVE DFHCOMMAREA(LENGTH OF CARDDEMO-COMMAREA + 1:
+                               LENGTH OF WS-THIS-PROGCOMMAREA ) TO
+                                WS-THIS-PROGCOMMAREA
+           END-IF
 038200***************************************************************** 03820000
 038300* Store the Mapped PF Key                                         03830000
 038400* Remap PFkeys as needed.                                         03840000
@@ -445,7 +456,6 @@
 044500             MOVE LIT-THISTRANID     TO CDEMO-FROM-TRANID         04450000
 044600             MOVE LIT-THISPGM        TO CDEMO-FROM-PROGRAM        04460000
 044700                                                                  04470000
-044800             SET  CDEMO-USRTYP-ADMIN TO TRUE                      04480000
 044900             SET  CDEMO-PGM-ENTER    TO TRUE                      04490000
 045000             MOVE LIT-THISMAPSET     TO CDEMO-LAST-MAPSET         04500000
 045100             MOVE LIT-THISMAP        TO CDEMO-LAST-MAP            04510000
@@ -621,6 +631,14 @@
 062100 0001-CHECK-PFKEYS-EXIT.                                          06210000
 062200     EXIT                                                         06220000
 062300     .                                                            06230000
+       0002-RETURN-TO-SIGNON.
+           EXEC CICS XCTL
+                PROGRAM (LIT-SIGNONPGM)
+           END-EXEC
+           .
+       0002-RETURN-TO-SIGNON-EXIT.
+           EXIT
+           .
 062400                                                                  06240000
 062500 1000-PROCESS-INPUTS.                                             06250000
 062600     PERFORM 1100-RECEIVE-MAP                                     06260000
