@@ -3,6 +3,7 @@ package com.carddemo.posttran;
 import java.util.Locale;
 import java.math.BigDecimal;
 import java.math.BigInteger;
+import java.util.Locale;
 
 /**
  * Packed-decimal fields ({@code USAGE COMP-3}): two digits per byte and a sign in the last
