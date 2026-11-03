@@ -124,8 +124,7 @@ for pat in '[}J-R]$' '[{A-I]$'; do
   printf '  %-13s %-10s (%s)\n' "$a" "$(echo "$a" | signed)" "$(echo "$a" | explain_sign)"
 done
 say "Read the sign the wrong way and 299 of 300 are rejected." \
-    "Nothing crashes, but it silently misreads every amount." \
-    "Same program, same data."
+    "Nothing crashes, but it silently misreads every amount."
 
 step "2. The Java port, same input" \
   "Program:   the Java 17 port in java/," \
@@ -181,10 +180,12 @@ SAMPLE_RC=0
 CBTRN02C_JAR="$BROKEN/target/cbtrn02c.jar" \
   spin "Running the changed Java     in: app/data/ASCII   vs: tests/golden/cbtrn02c" "$OUT/broken-sample.log" \
   "$ROOT/tests/compare-cbtrn02c.sh" || SAMPLE_RC=$?
-grep -E '^RESULT' "$OUT/broken-sample.log" |
-  sed -e 's/ (details above.*//' -e 's/^RESULT: COBOL and Java both match [^ ]*/RESULT: COBOL and the changed Java both match the baseline/' |
-  paint | sed 's/^./ &/'
+SAMPLE_OUT="$ROOT/build/cbtrn02c-compare/cbtrn02c/java"
+BROKEN_JAVA_RC="$(awk '/^  FAIL +Java return code/ { print $5; found = 1 } END { if (!found) print 4 }' "$OUT/broken-sample.log")"
+echo; echo " Return code: $BROKEN_JAVA_RC"
+counts "$SAMPLE_OUT/sysout.txt" "$SAMPLE_OUT/DALYREJS.txt"
 if [ "$SAMPLE_RC" -eq 0 ]; then
+  printf '\n %sMatches the baseline.%s\n' "$GREEN$BOLD" "$RESET"
   say "The changed Java passes." \
       "No sample transaction lands exactly on a limit," \
       "so the sample data cannot tell the two programs apart."
