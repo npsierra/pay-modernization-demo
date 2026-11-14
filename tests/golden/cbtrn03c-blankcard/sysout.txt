@@ -1,0 +1,7 @@
+START OF EXECUTION OF PROGRAM CBTRN03C
+Reporting from 2026-03-01 to 2026-03-31
+0000000000000001010001POS TERM  Report edge case                                                                                    0000000050{800000000Test Merchant                                     Testville                                         12345                     2026-03-02-10.00.00.0000002026-03-02-11.00.00.000000                    
+0000000000000002010001POS TERM  Report edge case                                                                                    0000000060{800000000Test Merchant                                     Testville                                         12345     40000000000000012026-03-02-10.00.00.0000002026-03-02-11.00.00.000000                    
+TRAN-AMT +000000006.00
+WS-PAGE-TOTAL+000000011.00
+END OF EXECUTION OF PROGRAM CBTRN03C
