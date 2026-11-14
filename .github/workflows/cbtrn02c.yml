@@ -85,6 +85,16 @@ jobs:
       - name: CBTRN01C random batches, COBOL vs Java
         run: tests/fuzz-cbtrn02c.py 1 200 cbtrn01c
 
+      - name: CBACT02C (card file listing), COBOL and Java vs baseline
+        run: |
+          tests/compare-cbact02c.sh
+          tests/compare-cbact02c.sh tests/data/cbact02c-edge tests/golden/cbact02c-edge
+          tests/compare-cbact02c.sh tests/data/cbact02c-empty tests/golden/cbact02c-empty
+          tests/compare-cbact02c.sh tests/data/cbact02c-abend tests/golden/cbact02c-abend 16
+
+      - name: CBACT02C random card files, COBOL vs Java
+        run: tests/fuzz-cbtrn02c.py 1 200 cbact02c
+
       - name: Keep outputs for inspection
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -95,5 +105,6 @@ jobs:
             build/cbact04c-compare/
             build/cbact01c-compare/
             build/cbtrn01c-compare/
+            build/cbact02c-compare/
             build/cbtrn02c-fuzz/
           if-no-files-found: ignore
