@@ -5,10 +5,12 @@
       *               indexed file, or unloads an indexed file to text.
       * Usage       : KSDSUTIL LOAD|UNLOAD XREF|ACCT|TCATBAL
       *               KSDSUTIL UNLOAD TRAN
-      *               KSDSUTIL LOAD XREFAIX|DISCGRP
+      *               KSDSUTIL LOAD XREFAIX|DISCGRP|CUST|CARD|TRAN
       *               XREFAIX = card cross-reference with the account
       *               ID alternate index (CARDXREF.VSAM.AIX, used by
-      *               CBACT04C); DISCGRP = disclosure groups.
+      *               CBACT04C); DISCGRP = disclosure groups;
+      *               CUST = customers, CARD = cards, TRAN =
+      *               transaction master (opened by CBTRN01C).
       * Files       : DD_TEXTFILE = text side, DD_KSDSFILE = indexed.
       *               Short text lines are space padded to the record
       *               length, so trimmed lines load as full records.
@@ -61,10 +63,22 @@
                   RECORD KEY   IS TRAN-KEY
                   FILE STATUS  IS WS-KSDS-STATUS.
 
+           SELECT CUST-FILE ASSIGN TO KSDSFILE
+                  ORGANIZATION IS INDEXED
+                  ACCESS MODE  IS SEQUENTIAL
+                  RECORD KEY   IS CUST-KEY
+                  FILE STATUS  IS WS-KSDS-STATUS.
+
+           SELECT CARD-FILE ASSIGN TO KSDSFILE
+                  ORGANIZATION IS INDEXED
+                  ACCESS MODE  IS SEQUENTIAL
+                  RECORD KEY   IS CARD-KEY
+                  FILE STATUS  IS WS-KSDS-STATUS.
+
        DATA DIVISION.
        FILE SECTION.
        FD  TEXT-FILE.
-       01  TEXT-REC                    PIC X(350).
+       01  TEXT-REC                    PIC X(500).
 
        FD  XREF-FILE.
        01  XREF-REC.
@@ -98,6 +112,16 @@
            05 TRAN-KEY                 PIC X(16).
            05 FILLER                   PIC X(334).
 
+       FD  CUST-FILE.
+       01  CUST-REC.
+           05 CUST-KEY                 PIC X(09).
+           05 FILLER                   PIC X(491).
+
+       FD  CARD-FILE.
+       01  CARD-REC.
+           05 CARD-KEY                 PIC X(16).
+           05 FILLER                   PIC X(134).
+
        WORKING-STORAGE SECTION.
        01  WS-MODE                     PIC X(8).
        01  WS-TYPE                     PIC X(8).
@@ -115,6 +139,9 @@
              WHEN 'LOAD'   ALSO 'TCATBAL' PERFORM 1200-LOAD-TCATBAL
              WHEN 'LOAD'   ALSO 'XREFAIX' PERFORM 1300-LOAD-XREFAIX
              WHEN 'LOAD'   ALSO 'DISCGRP' PERFORM 1400-LOAD-DISCGRP
+             WHEN 'LOAD'   ALSO 'CUST'    PERFORM 1500-LOAD-CUST
+             WHEN 'LOAD'   ALSO 'CARD'    PERFORM 1600-LOAD-CARD
+             WHEN 'LOAD'   ALSO 'TRAN'    PERFORM 1700-LOAD-TRAN
              WHEN 'UNLOAD' ALSO 'XREF'    PERFORM 2000-UNLOAD-XREF
              WHEN 'UNLOAD' ALSO 'ACCT'    PERFORM 2100-UNLOAD-ACCT
              WHEN 'UNLOAD' ALSO 'TCATBAL' PERFORM 2200-UNLOAD-TCATBAL
@@ -188,6 +215,42 @@
                PERFORM 8100-READ-TEXT
            END-PERFORM
            CLOSE TEXT-FILE DISCGRP-FILE
+           PERFORM 8400-CHECK-CLOSE.
+
+       1500-LOAD-CUST.
+           OPEN INPUT TEXT-FILE OUTPUT CUST-FILE
+           PERFORM 8000-CHECK-OPEN
+           PERFORM 8100-READ-TEXT
+           PERFORM UNTIL WS-EOF = 'Y'
+               WRITE CUST-REC FROM TEXT-REC
+               PERFORM 8200-CHECK-KSDS-IO
+               PERFORM 8100-READ-TEXT
+           END-PERFORM
+           CLOSE TEXT-FILE CUST-FILE
+           PERFORM 8400-CHECK-CLOSE.
+
+       1600-LOAD-CARD.
+           OPEN INPUT TEXT-FILE OUTPUT CARD-FILE
+           PERFORM 8000-CHECK-OPEN
+           PERFORM 8100-READ-TEXT
+           PERFORM UNTIL WS-EOF = 'Y'
+               WRITE CARD-REC FROM TEXT-REC
+               PERFORM 8200-CHECK-KSDS-IO
+               PERFORM 8100-READ-TEXT
+           END-PERFORM
+           CLOSE TEXT-FILE CARD-FILE
+           PERFORM 8400-CHECK-CLOSE.
+
+       1700-LOAD-TRAN.
+           OPEN INPUT TEXT-FILE OUTPUT TRAN-FILE
+           PERFORM 8000-CHECK-OPEN
+           PERFORM 8100-READ-TEXT
+           PERFORM UNTIL WS-EOF = 'Y'
+               WRITE TRAN-REC FROM TEXT-REC
+               PERFORM 8200-CHECK-KSDS-IO
+               PERFORM 8100-READ-TEXT
+           END-PERFORM
+           CLOSE TEXT-FILE TRAN-FILE
            PERFORM 8400-CHECK-CLOSE.
 
        2000-UNLOAD-XREF.
